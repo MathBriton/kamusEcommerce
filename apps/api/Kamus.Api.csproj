@@ -1,0 +1,26 @@
+<Project Sdk="Microsoft.NET.Sdk.Web">
+
+  <PropertyGroup>
+    <RootNamespace>Kamus.Api</RootNamespace>
+    <UserSecretsId>kamus-api</UserSecretsId>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Microsoft.AspNetCore.OpenApi" />
+    <PackageReference Include="Microsoft.EntityFrameworkCore.Design">
+      <PrivateAssets>all</PrivateAssets>
+      <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
+    </PackageReference>
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="../../src/shared/Kamus.Shared/Kamus.Shared.csproj" />
+    <ProjectReference Include="../../src/modules/Catalog/Kamus.Catalog/Kamus.Catalog.csproj" />
+    <ProjectReference Include="../../src/modules/Inventory/Kamus.Inventory/Kamus.Inventory.csproj" />
+    <ProjectReference Include="../../src/modules/Cart/Kamus.Cart/Kamus.Cart.csproj" />
+    <ProjectReference Include="../../src/modules/Orders/Kamus.Orders/Kamus.Orders.csproj" />
+    <ProjectReference Include="../../src/modules/Payments/Kamus.Payments/Kamus.Payments.csproj" />
+    <ProjectReference Include="../../src/modules/Identity/Kamus.Identity/Kamus.Identity.csproj" />
+  </ItemGroup>
+
+</Project>

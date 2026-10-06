@@ -1,0 +1,87 @@
+root = true
+
+[*]
+charset = utf-8
+end_of_line = lf
+indent_style = space
+indent_size = 2
+insert_final_newline = true
+trim_trailing_whitespace = true
+
+[*.md]
+trim_trailing_whitespace = false
+
+[*.{cs,csproj,props,targets,slnx}]
+indent_size = 4
+
+[*.cs]
+# Organização
+dotnet_sort_system_directives_first = true
+csharp_using_directive_placement = outside_namespace:warning
+csharp_style_namespace_declarations = file_scoped:warning
+
+# Estilo
+csharp_style_var_for_built_in_types = true:suggestion
+csharp_style_var_when_type_is_apparent = true:suggestion
+csharp_style_var_elsewhere = true:suggestion
+csharp_prefer_braces = when_multiline:suggestion
+csharp_style_expression_bodied_methods = when_on_single_line:suggestion
+csharp_style_prefer_primary_constructors = true:suggestion
+dotnet_style_qualification_for_field = false:warning
+dotnet_style_qualification_for_property = false:warning
+dotnet_style_qualification_for_method = false:warning
+
+# Nomes
+dotnet_naming_rule.static_readonly_pascal.symbols = static_readonly_fields
+dotnet_naming_rule.static_readonly_pascal.style = pascal
+dotnet_naming_rule.static_readonly_pascal.severity = warning
+dotnet_naming_symbols.static_readonly_fields.applicable_kinds = field
+dotnet_naming_symbols.static_readonly_fields.applicable_accessibilities = *
+dotnet_naming_symbols.static_readonly_fields.required_modifiers = static, readonly
+dotnet_naming_style.pascal.capitalization = pascal_case
+
+dotnet_naming_rule.constants_pascal.symbols = constants
+dotnet_naming_rule.constants_pascal.style = pascal
+dotnet_naming_rule.constants_pascal.severity = warning
+dotnet_naming_symbols.constants.applicable_kinds = field
+dotnet_naming_symbols.constants.required_modifiers = const
+
+dotnet_naming_rule.private_fields_underscore.symbols = private_fields
+dotnet_naming_rule.private_fields_underscore.style = underscore_camel
+dotnet_naming_rule.private_fields_underscore.severity = warning
+dotnet_naming_symbols.private_fields.applicable_kinds = field
+dotnet_naming_symbols.private_fields.applicable_accessibilities = private
+dotnet_naming_style.underscore_camel.capitalization = camel_case
+dotnet_naming_style.underscore_camel.required_prefix = _
+
+# Analisadores ruidosos para um projeto de estudo
+dotnet_diagnostic.CA1848.severity = none   # LoggerMessage delegates
+dotnet_diagnostic.CA1716.severity = none   # nomes que colidem com palavras-chave (ex.: Shared)
+dotnet_diagnostic.CA1062.severity = none   # validação de argumentos públicos
+dotnet_diagnostic.CA2007.severity = none   # ConfigureAwait
+dotnet_diagnostic.CA1515.severity = none   # tornar tipos internal
+dotnet_diagnostic.CA1707.severity = none   # underscores em nomes de testes
+dotnet_diagnostic.CA1711.severity = none   # sufixos de nomes
+dotnet_diagnostic.CA1724.severity = none   # nomes de tipos colidindo com namespaces
+dotnet_diagnostic.CA1812.severity = none   # classes internas instanciadas via DI
+dotnet_diagnostic.CA1852.severity = none
+dotnet_diagnostic.CA1305.severity = none   # IFormatProvider
+dotnet_diagnostic.CA1307.severity = none
+dotnet_diagnostic.CA1308.severity = none   # ToLowerInvariant em slugs
+dotnet_diagnostic.CA1310.severity = none
+dotnet_diagnostic.CA1311.severity = none
+dotnet_diagnostic.CA1056.severity = none   # URIs como string em DTOs
+dotnet_diagnostic.CA1054.severity = none
+dotnet_diagnostic.CA1055.severity = none
+dotnet_diagnostic.CA2227.severity = none   # coleções com setter (EF)
+dotnet_diagnostic.CA1002.severity = none   # List<T> em entidades
+dotnet_diagnostic.CA1819.severity = none   # arrays em propriedades (row version)
+dotnet_diagnostic.CA1031.severity = none   # catch genérico em workers
+dotnet_diagnostic.CA1861.severity = none   # arrays constantes em migrations
+dotnet_diagnostic.CA2000.severity = none
+dotnet_diagnostic.CA1001.severity = none
+dotnet_diagnostic.IDE0005.severity = warning
+
+[**/Migrations/*.cs]
+generated_code = true
+dotnet_diagnostic.IDE0005.severity = none

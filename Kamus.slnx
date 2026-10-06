@@ -1,0 +1,39 @@
+<Solution>
+  <Folder Name="/apps/" />
+  <Folder Name="/apps/api/">
+    <Project Path="apps/api/Kamus.Api.csproj" />
+  </Folder>
+  <Folder Name="/src/" />
+  <Folder Name="/src/modules/" />
+  <Folder Name="/src/modules/Cart/">
+    <Project Path="src/modules/Cart/Kamus.Cart.Contracts/Kamus.Cart.Contracts.csproj" />
+    <Project Path="src/modules/Cart/Kamus.Cart/Kamus.Cart.csproj" />
+  </Folder>
+  <Folder Name="/src/modules/Catalog/">
+    <Project Path="src/modules/Catalog/Kamus.Catalog.Contracts/Kamus.Catalog.Contracts.csproj" />
+    <Project Path="src/modules/Catalog/Kamus.Catalog/Kamus.Catalog.csproj" />
+  </Folder>
+  <Folder Name="/src/modules/Identity/">
+    <Project Path="src/modules/Identity/Kamus.Identity.Contracts/Kamus.Identity.Contracts.csproj" />
+    <Project Path="src/modules/Identity/Kamus.Identity/Kamus.Identity.csproj" />
+  </Folder>
+  <Folder Name="/src/modules/Inventory/">
+    <Project Path="src/modules/Inventory/Kamus.Inventory.Contracts/Kamus.Inventory.Contracts.csproj" />
+    <Project Path="src/modules/Inventory/Kamus.Inventory/Kamus.Inventory.csproj" />
+  </Folder>
+  <Folder Name="/src/modules/Orders/">
+    <Project Path="src/modules/Orders/Kamus.Orders.Contracts/Kamus.Orders.Contracts.csproj" />
+    <Project Path="src/modules/Orders/Kamus.Orders/Kamus.Orders.csproj" />
+  </Folder>
+  <Folder Name="/src/modules/Payments/">
+    <Project Path="src/modules/Payments/Kamus.Payments.Contracts/Kamus.Payments.Contracts.csproj" />
+    <Project Path="src/modules/Payments/Kamus.Payments/Kamus.Payments.csproj" />
+  </Folder>
+  <Folder Name="/src/shared/">
+    <Project Path="src/shared/Kamus.Shared/Kamus.Shared.csproj" />
+  </Folder>
+  <Folder Name="/tests/">
+    <Project Path="tests/Kamus.ArchitectureTests/Kamus.ArchitectureTests.csproj" />
+    <Project Path="tests/Kamus.IntegrationTests/Kamus.IntegrationTests.csproj" />
+  </Folder>
+</Solution>

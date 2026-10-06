@@ -1,0 +1,7 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <ItemGroup>
+    <ProjectReference Include="../../apps/api/Kamus.Api.csproj" />
+  </ItemGroup>
+
+</Project>

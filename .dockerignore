@@ -1,0 +1,11 @@
+**/bin/
+**/obj/
+**/node_modules/
+**/.next/
+**/coverage/
+.git/
+.github/
+docs/
+storage/
+**/*.md
+!apps/web/**/*.md
