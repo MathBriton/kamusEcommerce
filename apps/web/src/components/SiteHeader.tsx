@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { getCategoryTreeSafe } from "@/lib/catalog";
+import { HeaderActions } from "./HeaderActions";
 
 /** Cabeçalho com o menu de categorias (árvore vinda da API, em cache ISR). */
 export async function SiteHeader() {
@@ -52,6 +53,7 @@ export async function SiteHeader() {
             ))}
           </ul>
         </nav>
+        <HeaderActions />
       </div>
     </header>
   );

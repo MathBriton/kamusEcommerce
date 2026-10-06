@@ -1,9 +1,11 @@
 "use client";
 
 import Image from "next/image";
+import Link from "next/link";
 import { useState } from "react";
 import { Price } from "@/components/catalog/Price";
 import type { ProductDetail } from "@/lib/catalog";
+import { notifyCartChanged, readProblem } from "@/lib/shop";
 
 type Props = { product: ProductDetail };
 
@@ -15,6 +17,8 @@ export function ProductPurchase({ product }: Props) {
   const [colorName, setColorName] = useState((firstInStock ?? product.colors[0]).name);
   const [skuId, setSkuId] = useState<string | null>(null);
   const [imageIndex, setImageIndex] = useState(0);
+  const [adding, setAdding] = useState(false);
+  const [feedback, setFeedback] = useState<{ ok: boolean; message: string } | null>(null);
 
   const color = product.colors.find((c) => c.name === colorName) ?? product.colors[0];
   const sku = color.sizes.find((s) => s.skuId === skuId) ?? null;
@@ -25,6 +29,28 @@ export function ProductPurchase({ product }: Props) {
     setColorName(name);
     setSkuId(null);
     setImageIndex(0);
+    setFeedback(null);
+  }
+
+  async function addToCart() {
+    if (!sku) return;
+    setAdding(true);
+    setFeedback(null);
+    try {
+      const response = await fetch("/api/cart/items", {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ skuId: sku.skuId, quantity: 1 }),
+      });
+      if (response.ok) {
+        setFeedback({ ok: true, message: "Adicionado à sacola." });
+        notifyCartChanged();
+      } else {
+        setFeedback({ ok: false, message: await readProblem(response) });
+      }
+    } finally {
+      setAdding(false);
+    }
   }
 
   return (
@@ -116,7 +142,10 @@ export function ProductPurchase({ product }: Props) {
                   key={s.skuId}
                   type="button"
                   disabled={unavailable}
-                  onClick={() => setSkuId(s.skuId)}
+                  onClick={() => {
+                    setSkuId(s.skuId);
+                    setFeedback(null);
+                  }}
                   aria-pressed={selected}
                   aria-label={`${sizeLabel(s.size)}${unavailable ? " (esgotado)" : ""}`}
                   className={`min-w-12 border px-3 py-2.5 text-sm ${
@@ -143,12 +172,22 @@ export function ProductPurchase({ product }: Props) {
 
         <button
           type="button"
-          disabled
-          className="w-full bg-ink py-4 text-sm tracking-widest text-paper uppercase disabled:opacity-50"
-          title="O carrinho chega na próxima release"
+          disabled={!sku || adding}
+          onClick={addToCart}
+          className="w-full bg-ink py-4 text-sm tracking-widest text-paper uppercase transition-colors hover:bg-accent disabled:opacity-50 disabled:hover:bg-ink"
         >
-          {sku ? "Adicionar à sacola (em breve)" : "Selecione um tamanho"}
+          {!sku ? "Selecione um tamanho" : adding ? "Adicionando…" : "Adicionar à sacola"}
         </button>
+        {feedback && (
+          <p role="status" className={`text-sm ${feedback.ok ? "text-ink" : "text-sale"}`}>
+            {feedback.message}{" "}
+            {feedback.ok && (
+              <Link href="/carrinho" className="text-accent underline underline-offset-4">
+                Ver sacola
+              </Link>
+            )}
+          </p>
+        )}
       </div>
     </div>
   );

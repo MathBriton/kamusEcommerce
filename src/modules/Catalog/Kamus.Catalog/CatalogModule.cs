@@ -1,6 +1,7 @@
 using FluentValidation;
 using Kamus.Catalog.Api;
 using Kamus.Catalog.Application;
+using Kamus.Catalog.Contracts;
 using Kamus.Catalog.Persistence;
 using Kamus.Catalog.Seed;
 using Kamus.Shared.Infrastructure;
@@ -19,6 +20,7 @@ public sealed class CatalogModule : IModule
     {
         services.AddModuleDbContext<CatalogDbContext>(CatalogDbContext.Schema);
         services.AddScoped<CatalogQueries>();
+        services.AddScoped<ICatalogService, CatalogService>();
         services.AddScoped<IDataSeeder, CatalogSeeder>();
         services.AddValidatorsFromAssemblyContaining<CatalogModule>(includeInternalTypes: true);
     }

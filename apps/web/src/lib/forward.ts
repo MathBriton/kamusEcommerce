@@ -18,6 +18,10 @@ export async function forwardToApi(request: Request, targetPath: string): Promis
   const headers = new Headers(request.headers);
   for (const h of HOP_BY_HOP) headers.delete(h);
 
+  // A API usa estes cabeçalhos para saber o protocolo original (cookies Secure em produção).
+  headers.set("x-forwarded-proto", source.protocol.replace(":", ""));
+  headers.set("x-forwarded-host", source.host);
+
   const hasBody = !["GET", "HEAD"].includes(request.method);
   const upstream = await fetch(`${apiUrl}${targetPath}${source.search}`, {
     method: request.method,

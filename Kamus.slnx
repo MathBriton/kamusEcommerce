@@ -35,5 +35,6 @@
   <Folder Name="/tests/">
     <Project Path="tests/Kamus.ArchitectureTests/Kamus.ArchitectureTests.csproj" />
     <Project Path="tests/Kamus.IntegrationTests/Kamus.IntegrationTests.csproj" />
+    <Project Path="tests/Kamus.UnitTests/Kamus.UnitTests.csproj" />
   </Folder>
 </Solution>

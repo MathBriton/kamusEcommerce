@@ -1,3 +1,4 @@
+using Kamus.Shared.Events;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Npgsql;
@@ -21,6 +22,9 @@ public static class InfrastructureExtensions
         var redis = configuration.GetConnectionString(RedisConnectionName)
             ?? throw new InvalidOperationException($"ConnectionStrings:{RedisConnectionName} não configurada.");
 
+        postgres = ConnectionStrings.NormalizePostgres(postgres);
+        redis = ConnectionStrings.NormalizeRedis(redis);
+
         services.AddSingleton(_ => new NpgsqlDataSourceBuilder(postgres).Build());
         services.AddSingleton<IConnectionMultiplexer>(_ =>
         {
@@ -28,6 +32,9 @@ public static class InfrastructureExtensions
             options.AbortOnConnectFail = false;
             return ConnectionMultiplexer.Connect(options);
         });
+
+        services.AddInProcessEvents();
+        services.AddHttpContextAccessor();
 
         return services;
     }

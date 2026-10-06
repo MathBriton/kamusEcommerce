@@ -7,6 +7,7 @@
 
   <ItemGroup>
     <InternalsVisibleTo Include="Kamus.IntegrationTests" />
+    <InternalsVisibleTo Include="Kamus.UnitTests" />
   </ItemGroup>
 
 </Project>

@@ -15,7 +15,8 @@ public static class DbContextRegistration
     {
         services.AddDbContext<TContext>((sp, options) => options
             .UseNpgsql(sp.GetRequiredService<NpgsqlDataSource>(), npgsql => npgsql
-                .MigrationsHistoryTable("__ef_migrations_history", schema))
+                .MigrationsHistoryTable("__ef_migrations_history", schema)
+                .UseQuerySplittingBehavior(QuerySplittingBehavior.SplitQuery))
             .UseSnakeCaseNamingConvention());
 
         services.AddScoped<IDatabaseMigrator, DbContextMigrator<TContext>>();

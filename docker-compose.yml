@@ -37,6 +37,7 @@ services:
       ConnectionStrings__Redis: redis:6379
       Cors__Origins__0: http://localhost:3000
       Storage__LocalDisk__RootPath: /app/storage
+      Payments__FakePay__WebhookUrl: http://localhost:8080/api/payments/webhooks/fakepay
     ports:
       - "5080:8080"
     volumes:
@@ -52,7 +53,8 @@ services:
       context: apps/web
     environment:
       API_URL: http://api:8080
-      NEXT_PUBLIC_SITE_URL: http://localhost:3000
+      SITE_URL: http://localhost:3000
+      ENABLE_FULFILLMENT_SIMULATION: "true"
     ports:
       - "3000:3000"
     depends_on:

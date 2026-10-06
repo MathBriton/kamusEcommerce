@@ -9,6 +9,8 @@ internal sealed class InventoryDbContext(DbContextOptions<InventoryDbContext> op
 
     public DbSet<StockLevel> StockLevels => Set<StockLevel>();
 
+    public DbSet<Reservation> Reservations => Set<Reservation>();
+
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
         modelBuilder.HasDefaultSchema(Schema);
@@ -18,7 +20,27 @@ internal sealed class InventoryDbContext(DbContextOptions<InventoryDbContext> op
             b.HasKey(s => s.SkuId);
             b.Property(s => s.SkuId).ValueGeneratedNever();
             b.Property(s => s.Version).IsRowVersion();
-            b.ToTable(t => t.HasCheckConstraint("ck_stock_levels_quantity", "quantity >= 0"));
+            b.Ignore(s => s.Available);
+            b.ToTable(t =>
+            {
+                t.HasCheckConstraint("ck_stock_levels_quantity", "quantity >= 0");
+                t.HasCheckConstraint("ck_stock_levels_reserved", "reserved >= 0 AND reserved <= quantity");
+            });
+        });
+
+        modelBuilder.Entity<Reservation>(b =>
+        {
+            b.HasIndex(r => r.OrderId).IsUnique();
+            b.HasIndex(r => new { r.Status, r.ExpiresAt });
+            b.Property(r => r.Status).HasConversion<string>().HasMaxLength(20);
+            b.OwnsMany(r => r.Lines, l =>
+            {
+                l.ToTable("reservation_lines");
+                l.WithOwner().HasForeignKey("reservation_id");
+                l.Property<int>("id");
+                l.HasKey("id");
+            });
+            b.Navigation(r => r.Lines).UsePropertyAccessMode(PropertyAccessMode.Field);
         });
     }
 }

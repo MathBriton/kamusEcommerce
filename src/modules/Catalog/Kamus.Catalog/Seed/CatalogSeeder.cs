@@ -27,6 +27,7 @@ internal sealed class CatalogSeeder(
     {
         if (await db.Products.AnyAsync(cancellationToken))
         {
+            await RestoreMissingImagesAsync(cancellationToken);
             return;
         }
 
@@ -94,6 +95,43 @@ internal sealed class CatalogSeeder(
         await inventory.SetStockAsync(stock, cancellationToken);
 
         logger.LogInformation("Catálogo populado com {Products} produtos e {Skus} SKUs", products.Count, stock.Count);
+    }
+
+    /// <summary>
+    /// Em hospedagens com disco efêmero (ex.: containers sem volume), os arquivos somem a cada deploy
+    /// mas o banco continua populado. Regera as ilustrações que faltarem. (Na R4 as imagens vão para S3.)
+    /// </summary>
+    private async Task RestoreMissingImagesAsync(CancellationToken ct)
+    {
+        var templates = SeedCatalog.Templates.ToDictionary(t => t.CategoryPath);
+        var images = await db.Products.AsNoTracking()
+            .SelectMany(p => p.Images.Select(i => new
+            {
+                i.StorageKey,
+                i.Color,
+                CategoryPath = p.Category.Path,
+                Hex = p.Skus.Where(s => s.Color == i.Color).Select(s => s.ColorHex).FirstOrDefault(),
+            }))
+            .ToListAsync(ct);
+
+        var restored = 0;
+        foreach (var image in images)
+        {
+            if (image.Hex is null || !templates.TryGetValue(image.CategoryPath, out var template)
+                || await storage.ExistsAsync(image.StorageKey, ct))
+            {
+                continue;
+            }
+
+            var variant = image.StorageKey.EndsWith("-2.svg", StringComparison.Ordinal) ? 1 : 0;
+            await SaveImageAsync(image.StorageKey, GarmentArt.Render(template.Garment, image.Hex, variant), ct);
+            restored++;
+        }
+
+        if (restored > 0)
+        {
+            logger.LogInformation("{Count} imagens de produto regeradas", restored);
+        }
     }
 
     private static Dictionary<string, Category> CreateCategories()

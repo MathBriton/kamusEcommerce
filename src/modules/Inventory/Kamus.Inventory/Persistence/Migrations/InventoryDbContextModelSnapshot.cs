@@ -23,6 +23,48 @@ namespace Kamus.Inventory.Persistence.Migrations
 
             NpgsqlModelBuilderExtensions.UseIdentityByDefaultColumns(modelBuilder);
 
+            modelBuilder.Entity("Kamus.Inventory.Domain.Reservation", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid")
+                        .HasColumnName("id");
+
+                    b.Property<DateTimeOffset?>("ClosedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("closed_at");
+
+                    b.Property<DateTimeOffset>("CreatedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("created_at");
+
+                    b.Property<DateTimeOffset>("ExpiresAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("expires_at");
+
+                    b.Property<Guid>("OrderId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("order_id");
+
+                    b.Property<string>("Status")
+                        .IsRequired()
+                        .HasMaxLength(20)
+                        .HasColumnType("character varying(20)")
+                        .HasColumnName("status");
+
+                    b.HasKey("Id")
+                        .HasName("pk_reservations");
+
+                    b.HasIndex("OrderId")
+                        .IsUnique()
+                        .HasDatabaseName("ix_reservations_order_id");
+
+                    b.HasIndex("Status", "ExpiresAt")
+                        .HasDatabaseName("ix_reservations_status_expires_at");
+
+                    b.ToTable("reservations", "inventory");
+                });
+
             modelBuilder.Entity("Kamus.Inventory.Domain.StockLevel", b =>
                 {
                     b.Property<Guid>("SkuId")
@@ -32,6 +74,10 @@ namespace Kamus.Inventory.Persistence.Migrations
                     b.Property<int>("Quantity")
                         .HasColumnType("integer")
                         .HasColumnName("quantity");
+
+                    b.Property<int>("Reserved")
+                        .HasColumnType("integer")
+                        .HasColumnName("reserved");
 
                     b.Property<DateTimeOffset>("UpdatedAt")
                         .HasColumnType("timestamp with time zone")
@@ -49,7 +95,48 @@ namespace Kamus.Inventory.Persistence.Migrations
                     b.ToTable("stock_levels", "inventory", t =>
                         {
                             t.HasCheckConstraint("ck_stock_levels_quantity", "quantity >= 0");
+
+                            t.HasCheckConstraint("ck_stock_levels_reserved", "reserved >= 0 AND reserved <= quantity");
                         });
+                });
+
+            modelBuilder.Entity("Kamus.Inventory.Domain.Reservation", b =>
+                {
+                    b.OwnsMany("Kamus.Inventory.Domain.ReservationLineItem", "Lines", b1 =>
+                        {
+                            b1.Property<int>("id")
+                                .ValueGeneratedOnAdd()
+                                .HasColumnType("integer")
+                                .HasColumnName("id");
+
+                            NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b1.Property<int>("id"));
+
+                            b1.Property<int>("Quantity")
+                                .HasColumnType("integer")
+                                .HasColumnName("quantity");
+
+                            b1.Property<Guid>("SkuId")
+                                .HasColumnType("uuid")
+                                .HasColumnName("sku_id");
+
+                            b1.Property<Guid>("reservation_id")
+                                .HasColumnType("uuid")
+                                .HasColumnName("reservation_id");
+
+                            b1.HasKey("id")
+                                .HasName("pk_reservation_lines");
+
+                            b1.HasIndex("reservation_id")
+                                .HasDatabaseName("ix_reservation_lines_reservation_id");
+
+                            b1.ToTable("reservation_lines", "inventory");
+
+                            b1.WithOwner()
+                                .HasForeignKey("reservation_id")
+                                .HasConstraintName("fk_reservation_lines_reservations_reservation_id");
+                        });
+
+                    b.Navigation("Lines");
                 });
 #pragma warning restore 612, 618
         }

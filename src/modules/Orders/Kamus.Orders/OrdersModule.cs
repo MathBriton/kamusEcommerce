@@ -1,3 +1,11 @@
+using FluentValidation;
+using Kamus.Inventory.Contracts;
+using Kamus.Orders.Api;
+using Kamus.Orders.Application;
+using Kamus.Orders.Persistence;
+using Kamus.Payments.Contracts;
+using Kamus.Shared.Events;
+using Kamus.Shared.Infrastructure;
 using Kamus.Shared.Modules;
 using Microsoft.AspNetCore.Routing;
 using Microsoft.Extensions.Configuration;
@@ -11,9 +19,16 @@ public sealed class OrdersModule : IModule
 
     public void Register(IServiceCollection services, IConfiguration configuration)
     {
+        services.Configure<OrdersOptions>(configuration.GetSection(OrdersOptions.SectionName));
+        services.AddModuleDbContext<OrdersDbContext>(OrdersDbContext.Schema);
+        services.AddScoped<CheckoutService>();
+        services.AddScoped<OrderQueries>();
+        services.AddScoped<OrderEventHandlers>();
+        services.AddScoped<IEventHandler<PaymentApproved>>(sp => sp.GetRequiredService<OrderEventHandlers>());
+        services.AddScoped<IEventHandler<PaymentDeclined>>(sp => sp.GetRequiredService<OrderEventHandlers>());
+        services.AddScoped<IEventHandler<ReservationExpired>>(sp => sp.GetRequiredService<OrderEventHandlers>());
+        services.AddValidatorsFromAssemblyContaining<OrdersModule>(includeInternalTypes: true);
     }
 
-    public void MapEndpoints(IEndpointRouteBuilder endpoints)
-    {
-    }
+    public void MapEndpoints(IEndpointRouteBuilder endpoints) => OrdersEndpoints.Map(endpoints);
 }

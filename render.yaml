@@ -1,0 +1,67 @@
+# Blueprint do Render (https://render.com/docs/blueprint-spec).
+# Cria Postgres, Redis (Key Value), a API .NET e o storefront Next.js a partir deste repositório.
+# Passo a passo em docs/deploy.md.
+
+databases:
+  - name: kamus-db
+    plan: free
+    databaseName: kamus
+    user: kamus
+
+services:
+  - type: keyvalue
+    name: kamus-redis
+    plan: free
+    ipAllowList: [] # acessível só pela rede interna do Render
+
+  - type: web
+    name: kamus-api
+    runtime: docker
+    plan: free
+    dockerContext: .
+    dockerfilePath: ./apps/api/Dockerfile
+    healthCheckPath: /health
+    envVars:
+      - key: PORT
+        value: "8080"
+      - key: ASPNETCORE_ENVIRONMENT
+        value: Production
+      - key: ConnectionStrings__Postgres
+        fromDatabase:
+          name: kamus-db
+          property: connectionString
+      - key: ConnectionStrings__Redis
+        fromService:
+          type: keyvalue
+          name: kamus-redis
+          property: connectionString
+      - key: Database__MigrateOnStartup
+        value: "true"
+      - key: Seed__Enabled
+        value: "true"
+      - key: Orders__EnableFulfillmentSimulation
+        value: "true"
+      - key: Storage__LocalDisk__RootPath
+        value: /app/storage
+      # O FakePay roda dentro do próprio container da API e chama o webhook localmente.
+      - key: Payments__FakePay__WebhookUrl
+        value: http://localhost:8080/api/payments/webhooks/fakepay
+      - key: Payments__FakePay__WebhookSecret
+        generateValue: true
+
+  - type: web
+    name: kamus-web
+    runtime: docker
+    plan: free
+    dockerContext: ./apps/web
+    dockerfilePath: ./apps/web/Dockerfile
+    envVars:
+      - key: PORT
+        value: "3000"
+      - key: API_URL
+        fromService:
+          type: web
+          name: kamus-api
+          property: hostport
+      - key: ENABLE_FULFILLMENT_SIMULATION
+        value: "true"

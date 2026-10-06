@@ -1,5 +1,9 @@
+using Kamus.Payments.FakePay;
 using Microsoft.AspNetCore.Hosting;
+using Microsoft.AspNetCore.Hosting.Server;
 using Microsoft.AspNetCore.Mvc.Testing;
+using Microsoft.AspNetCore.TestHost;
+using Microsoft.Extensions.DependencyInjection;
 using Testcontainers.PostgreSql;
 using Testcontainers.Redis;
 
@@ -28,6 +32,9 @@ public sealed class KamusApiFactory : WebApplicationFactory<Program>, IAsyncLife
     public async ValueTask InitializeAsync()
     {
         await Task.WhenAll(_postgres.StartAsync(), _redis.StartAsync());
+
+        // Sobe o host (e roda as migrations) uma única vez, antes de os testes rodarem em paralelo.
+        _ = Server;
     }
 
     protected override void ConfigureWebHost(IWebHostBuilder builder)
@@ -35,6 +42,13 @@ public sealed class KamusApiFactory : WebApplicationFactory<Program>, IAsyncLife
         builder.UseEnvironment("Testing");
         builder.UseSetting("ConnectionStrings:Postgres", PostgresConnectionString);
         builder.UseSetting("ConnectionStrings:Redis", RedisConnectionString);
+
+        builder.ConfigureTestServices(services =>
+        {
+            // Os webhooks do FakePay entram direto no TestServer, sem rede.
+            services.AddHttpClient(FakePayProcessor.HttpClientName)
+                .ConfigurePrimaryHttpMessageHandler(sp => ((TestServer)sp.GetRequiredService<IServer>()).CreateHandler());
+        });
     }
 
     public override async ValueTask DisposeAsync()
