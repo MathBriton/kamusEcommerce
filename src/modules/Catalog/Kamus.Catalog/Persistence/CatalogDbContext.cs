@@ -1,0 +1,75 @@
+using Kamus.Catalog.Domain;
+using Microsoft.EntityFrameworkCore;
+
+namespace Kamus.Catalog.Persistence;
+
+internal sealed class CatalogDbContext(DbContextOptions<CatalogDbContext> options) : DbContext(options)
+{
+    public const string Schema = "catalog";
+
+    public DbSet<Category> Categories => Set<Category>();
+
+    public DbSet<Collection> Collections => Set<Collection>();
+
+    public DbSet<Product> Products => Set<Product>();
+
+    public DbSet<Sku> Skus => Set<Sku>();
+
+    protected override void OnModelCreating(ModelBuilder modelBuilder)
+    {
+        modelBuilder.HasDefaultSchema(Schema);
+
+        modelBuilder.Entity<Category>(b =>
+        {
+            b.Property(c => c.Name).HasMaxLength(100);
+            b.Property(c => c.Slug).HasMaxLength(100);
+            b.Property(c => c.Path).HasMaxLength(300);
+            b.HasIndex(c => c.Path).IsUnique();
+            b.HasOne<Category>().WithMany().HasForeignKey(c => c.ParentId).OnDelete(DeleteBehavior.Restrict);
+        });
+
+        modelBuilder.Entity<Collection>(b =>
+        {
+            b.Property(c => c.Name).HasMaxLength(100);
+            b.Property(c => c.Slug).HasMaxLength(100);
+            b.HasIndex(c => c.Slug).IsUnique();
+        });
+
+        modelBuilder.Entity<Product>(b =>
+        {
+            b.Property(p => p.Name).HasMaxLength(200);
+            b.Property(p => p.Slug).HasMaxLength(200);
+            b.Property(p => p.Brand).HasMaxLength(100);
+            b.HasIndex(p => p.Slug).IsUnique();
+            b.HasIndex(p => new { p.CreatedAt, p.Id });
+            b.HasOne(p => p.Category).WithMany().HasForeignKey(p => p.CategoryId).OnDelete(DeleteBehavior.Restrict);
+            b.HasOne(p => p.Collection).WithMany().HasForeignKey(p => p.CollectionId).OnDelete(DeleteBehavior.SetNull);
+            b.HasMany(p => p.Skus).WithOne().HasForeignKey(s => s.ProductId);
+            b.HasMany(p => p.Images).WithOne().HasForeignKey(i => i.ProductId);
+            b.Navigation(p => p.Skus).UsePropertyAccessMode(PropertyAccessMode.Field);
+            b.Navigation(p => p.Images).UsePropertyAccessMode(PropertyAccessMode.Field);
+        });
+
+        modelBuilder.Entity<Sku>(b =>
+        {
+            b.Property(s => s.Code).HasMaxLength(50);
+            b.Property(s => s.Color).HasMaxLength(50);
+            b.Property(s => s.ColorHex).HasMaxLength(7);
+            b.Property(s => s.Size).HasMaxLength(10);
+            b.Property(s => s.Price).HasPrecision(10, 2);
+            b.Property(s => s.SalePrice).HasPrecision(10, 2);
+            b.HasIndex(s => s.Code).IsUnique();
+            b.HasIndex(s => new { s.ProductId, s.Color, s.Size }).IsUnique();
+            b.HasIndex(s => s.Size);
+            b.HasIndex(s => s.Color);
+        });
+
+        modelBuilder.Entity<ProductImage>(b =>
+        {
+            b.ToTable("product_images");
+            b.Property(i => i.Color).HasMaxLength(50);
+            b.Property(i => i.StorageKey).HasMaxLength(300);
+            b.Property(i => i.Alt).HasMaxLength(300);
+        });
+    }
+}

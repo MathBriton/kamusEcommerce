@@ -491,4 +491,4 @@ coverage/
 .env.local
 .env*.local
 next-env.d.ts
-/storage/
+storage/

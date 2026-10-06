@@ -16,5 +16,6 @@ WORKDIR /app
 ENV ASPNETCORE_HTTP_PORTS=8080
 EXPOSE 8080
 COPY --from=build /app .
+RUN mkdir -p /app/storage && chown $APP_UID /app/storage
 USER $APP_UID
 ENTRYPOINT ["dotnet", "Kamus.Api.dll"]

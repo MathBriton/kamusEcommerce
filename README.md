@@ -11,8 +11,8 @@ Pré-requisito: Docker com Compose.
 
 1. `git clone https://github.com/MathBriton/kamusEcommerce.git && cd kamusEcommerce`
 2. `docker compose up -d --build`
-3. Abra a loja em <http://localhost:3000>
-4. A API responde em <http://localhost:5080/health>
+3. Abra a loja em <http://localhost:3000> (o catálogo de exemplo é criado na primeira subida)
+4. A API responde em <http://localhost:5080/health> e documenta os endpoints em `/openapi/v1.json`
 
 Para desenvolver fora do Docker (hot reload), suba só a infraestrutura com
 `docker compose up -d postgres redis` e rode:
@@ -21,6 +21,12 @@ Para desenvolver fora do Docker (hot reload), suba só a infraestrutura com
 dotnet run --project apps/api        # .NET 10 SDK → http://localhost:5080
 cd apps/web && npm install && npm run dev   # Node 22 → http://localhost:3000
 ```
+
+## O que já funciona
+
+- **Vitrine (R1):** menu de categorias, PLP com filtros por tamanho, cor e preço, ordenação e
+  paginação por cursor; PDP com galeria por cor, disponibilidade por tamanho e preço "de/por";
+  URLs amigáveis (`/masculino/calcas/jeans/calca-jeans-slim`), `sitemap.xml` e Open Graph.
 
 ## Estrutura
 

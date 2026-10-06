@@ -4,7 +4,7 @@
 > Domínio inspirado em lojas de moda brasileiras; marca, identidade visual e conteúdo são próprios.
 
 **Codinome do projeto:** `Kamus`
-**Status:** R0 — concluída
+**Status:** R1 — concluída
 **Última revisão:** 2026-10-06
 
 ---
@@ -70,7 +70,7 @@ Regra de dependência: um módulo expõe apenas um contrato público (interfaces
 | Release | Nome | Escopo | MVP? |
 |---|---|---|---|
 | R0 | Fundação | Repo, CI, ambiente local, esqueleto | ✅ (concluída) |
-| R1 | Vitrine | Catálogo navegável com SSR | ✅ |
+| R1 | Vitrine | Catálogo navegável com SSR | ✅ (concluída) |
 | R2 | Compra | Conta, carrinho, checkout, pedido | ✅ **(MVP fecha aqui)** |
 | R3 | Eventos & Busca | Outbox, mensageria, busca facetada | — |
 | R4 | Conteúdo & Mídia | CMS headless, storage S3, CDN | — |
@@ -224,3 +224,4 @@ Regra de dependência: um módulo expõe apenas um contrato público (interfaces
 |---|---|---|
 | 2026-10-06 | — | Documento criado; MVP definido como R0–R2 |
 | 2026-10-06 | R0 | Fundação entregue: monorepo, Compose, /health, CI, ADRs 0001–0003 |
+| 2026-10-06 | R1 | Vitrine entregue: catálogo com 100 produtos, PLP (ISR + filtros), PDP (SSR), sitemap; Lighthouse SEO 100 na PDP; ADRs 0004–0006 |
