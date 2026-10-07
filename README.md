@@ -70,5 +70,6 @@ Blueprint do Render pronto em [`render.yaml`](render.yaml); passo a passo em [do
 ## Documentação
 
 - [Arquitetura (C4, fluxo de compra, estados do pedido)](docs/architecture.md)
+- [Design system](docs/design-system/README.md)
 - [Decisões de arquitetura (ADRs)](docs/adr)
 - [Como contribuir](CONTRIBUTING.md)
