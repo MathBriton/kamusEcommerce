@@ -73,6 +73,6 @@ export async function proxy(request: NextRequest) {
 export const config = {
   // Ignora rotas internas, arquivos e páginas com prefixo próprio.
   matcher: [
-    "/((?!api/|files/|_next/|categoria/|produto/|colecoes/|status|conta|carrinho|checkout|entrar|cadastro|sitemap\\.xml|robots\\.txt|favicon\\.ico)(?!.*\\.).+)",
+    "/((?!api/|files/|_next/|categoria/|produto/|colecoes/|design-system|status|conta|carrinho|checkout|entrar|cadastro|sitemap\\.xml|robots\\.txt|favicon\\.ico)(?!.*\\.).+)",
   ],
 };

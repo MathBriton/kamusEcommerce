@@ -10,9 +10,9 @@ internal sealed class Product
     {
     }
 
-    public Product(string name, string slug, string description, string brand, Guid categoryId, Guid? collectionId, DateTimeOffset createdAt)
+    public Product(string name, string slug, string description, string brand, Guid categoryId, Guid? collectionId, DateTimeOffset createdAt, Guid? id = null)
     {
-        Id = Guid.CreateVersion7(createdAt);
+        Id = id ?? Guid.CreateVersion7(createdAt);
         Name = name;
         Slug = slug;
         Description = description;
@@ -53,7 +53,7 @@ internal sealed class Product
 
     public IReadOnlyList<ProductImage> Images => _images;
 
-    public Sku AddSku(string code, ColorInfo color, string size, int sizeOrder, decimal price, decimal? salePrice)
+    public Sku AddSku(string code, ColorInfo color, string size, int sizeOrder, decimal price, decimal? salePrice, Guid? id = null)
     {
         Sku.EnsureValidPrices(price, salePrice);
         if (_skus.Any(s => s.Color == color.Name && s.Size == size))
@@ -61,7 +61,7 @@ internal sealed class Product
             throw new InvalidOperationException($"Já existe o SKU {color.Name}/{size} neste produto.");
         }
 
-        var sku = new Sku(Id, code, color, size, sizeOrder, price, salePrice);
+        var sku = new Sku(Id, code, color, size, sizeOrder, price, salePrice, id);
         _skus.Add(sku);
         UpdatedAt = DateTimeOffset.UtcNow;
         return sku;
@@ -134,9 +134,9 @@ internal sealed class Sku
     {
     }
 
-    internal Sku(Guid productId, string code, ColorInfo color, string size, int sizeOrder, decimal price, decimal? salePrice)
+    internal Sku(Guid productId, string code, ColorInfo color, string size, int sizeOrder, decimal price, decimal? salePrice, Guid? id = null)
     {
-        Id = Guid.CreateVersion7();
+        Id = id ?? Guid.CreateVersion7();
         ProductId = productId;
         Code = code;
         Color = color.Name;

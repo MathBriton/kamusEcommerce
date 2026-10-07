@@ -8,35 +8,33 @@
 
 ## Onde estamos
 
-- MVP concluído: **R0** (fundação), **R1** (vitrine), **R2** (compra) e **R2.5** (backoffice).
-- `main` atualizada e com CI verde (API, Web, Admin e imagens Docker).
-- Deploy público **adiado por decisão do responsável**; `render.yaml` e `docs/deploy.md` estão prontos.
-- Roteiro em `stack.md` aprovado: próxima release é a **R8 — Qualidade contínua**, seguida da
-  **R12 — Auditoria & Exclusão segura** (log de auditoria e soft delete, pedido do responsável).
+- Concluídas: **R0, R1, R2** (MVP), **R2.5** (backoffice) e **R8** (qualidade contínua).
+- `main` é a branch padrão do GitHub. CI: API, Web, Admin, Docker images, **E2E e regressão
+  visual**; CodeQL e Dependabot ativos.
+- Deploy público **adiado por decisão do responsável** (`render.yaml` e `docs/deploy.md` prontos).
 
-## Próximo passo sugerido: R8 — Qualidade contínua
+## Próximo passo: R12 — Auditoria & Exclusão segura
 
-1. Playwright E2E no CI: fluxo de compra (vitrine → sacola → cadastro → checkout → pedido pago) e
-   backoffice (login → criar produto → SKUs → publicar → despachar pedido).
-2. Regressão visual: o mesmo roteiro gera as capturas de `apps/web/design` e `apps/admin/design`.
-3. Dependabot + CodeQL.
-4. Pacote compartilhado de tokens (`packages/ui`) para loja e admin.
-5. `.devcontainer` para GitHub Codespaces (o responsável não consegue rodar Docker no trabalho).
+Escopo em `stack.md`. Sugestão de execução:
 
-Escopo completo e ordem das demais releases: `stack.md`, seção 3.
+1. ADR: auditoria por interceptor do EF Core + módulo **Audit** (schema próprio, contrato
+   `IAuditLog`, tabela append-only) vs. triggers no banco. Recomendado: interceptor.
+2. Interceptor compartilhado em `Kamus.Shared` que captura quem/o quê/quando/antes→depois a partir do
+   `HttpContext` (usuário) e do ChangeTracker; cada módulo o registra no próprio DbContext.
+3. Soft delete: `DeletedAt`/`DeletedBy`, filtro global (`HasQueryFilter`), índices únicos parciais
+   (`WHERE deleted_at IS NULL`) — começando por produtos, SKUs e imagens.
+4. Backoffice: tela **Atividade**, aba **Histórico** em produto e pedido, **Lixeira** (restaurar).
+5. Testes de integração + cenários E2E novos (com capturas em `apps/admin/design`).
 
 ## Decisões em aberto
 
-- Releases R8 a R12 aprovadas. Na R12, decidir no ADR: auditoria por interceptor do EF Core +
-  módulo Audit (recomendado) vs. triggers no banco.
-- Quando publicar: Render para tudo (blueprint pronto, recomendado) ou híbrido, com os fronts na
-  Vercel e API + Postgres + Redis no Render. O híbrido exige ler `VERCEL_PROJECT_PRODUCTION_URL`
-  em `apps/web/src/lib/env.ts` e um blueprint só com a API.
+- Retenção da auditoria (sugestão: 2 anos) e do expurgo da lixeira (sugestão: 30 dias).
+- Quando publicar: Render para tudo (recomendado) ou híbrido (fronts na Vercel).
 
 ## Contexto útil
 
 - Os testes de integração precisam de Docker (Testcontainers); sem Docker, rode só unitários e arquitetura:
   `dotnet test --project tests/Kamus.UnitTests` e `dotnet test --project tests/Kamus.ArchitectureTests`.
-- Imagens do design system: `apps/web/design/README.md` (vitrine) e `apps/admin/design/README.md`
-  (backoffice). Para recapturar, suba a stack, gere dados de demonstração e use Playwright em 2x.
+- Imagens do design system: geradas pelos testes E2E (`./e2e/run.sh --update`), nunca à mão.
+- Sem Docker local? GitHub Codespaces (`.devcontainer/`) sobe tudo no navegador.
 - O responsável prefere respostas e documentação em português, com explicações de "por quê".

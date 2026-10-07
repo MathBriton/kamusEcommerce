@@ -1,22 +1,25 @@
-# Build context: apps/web
+# Build context: raiz do repositório (docker build -f apps/web/Dockerfile .),
+# porque o app importa os tokens compartilhados de packages/tokens.
 FROM node:22-alpine AS deps
-WORKDIR /app
-COPY package.json package-lock.json ./
+WORKDIR /repo/apps/web
+COPY apps/web/package.json apps/web/package-lock.json ./
 RUN npm ci
 
 FROM node:22-alpine AS build
-WORKDIR /app
+WORKDIR /repo/apps/web
 ENV NEXT_TELEMETRY_DISABLED=1
-COPY --from=deps /app/node_modules ./node_modules
-COPY . .
+COPY packages/ /repo/packages/
+COPY --from=deps /repo/apps/web/node_modules ./node_modules
+COPY apps/web/ ./
 RUN npm run build
 
 FROM node:22-alpine AS runtime
 WORKDIR /app
 ENV NODE_ENV=production NEXT_TELEMETRY_DISABLED=1 PORT=3000 HOSTNAME=0.0.0.0
-COPY --from=build --chown=node:node /app/.next/standalone ./
-COPY --from=build --chown=node:node /app/.next/static ./.next/static
-COPY --from=build --chown=node:node /app/public ./public
+# Com a raiz do monorepo como tracing root, o standalone espelha a estrutura apps/web.
+COPY --from=build --chown=node:node /repo/apps/web/.next/standalone ./
+COPY --from=build --chown=node:node /repo/apps/web/.next/static ./apps/web/.next/static
+COPY --from=build --chown=node:node /repo/apps/web/public ./apps/web/public
 USER node
 EXPOSE 3000
-CMD ["node", "server.js"]
+CMD ["node", "apps/web/server.js"]

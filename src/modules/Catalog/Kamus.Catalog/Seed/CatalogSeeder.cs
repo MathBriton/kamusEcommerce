@@ -59,21 +59,23 @@ internal sealed class CatalogSeeder(
                 var price = RoundPrice(template.MinPrice + (decimal)random.NextDouble() * (template.MaxPrice - template.MinPrice));
                 decimal? salePrice = onSale ? RoundPrice(price * (decimal)(0.6 + (random.NextDouble() * 0.25))) : null;
 
+                var slug = UniqueSlug(name, template.CategoryPath, products);
                 var product = new Product(
                     name,
-                    UniqueSlug(name, template.CategoryPath, products),
+                    slug,
                     SeedCatalog.Describe(name, template.Material, colors[0].Name),
                     SeedCatalog.Brands[random.Next(SeedCatalog.Brands.Length)],
                     category.Id,
                     collection?.Id,
-                    createdAt);
+                    createdAt,
+                    DeterministicGuid.V7(createdAt, $"product:{slug}"));
 
                 foreach (var color in colors)
                 {
                     foreach (var size in template.Sizes)
                     {
                         var code = $"KM{products.Count + 1:D3}-{Slug.From(color.Name).ToUpperInvariant()}-{size}";
-                        var sku = product.AddSku(code, color, size, SeedCatalog.SizeOrder(size), price, salePrice);
+                        var sku = product.AddSku(code, color, size, SeedCatalog.SizeOrder(size), price, salePrice, DeterministicGuid.V7(createdAt, $"sku:{code}"));
                         stock[sku.Id] = random.NextDouble() < 0.15 ? 0 : random.Next(1, 16);
                     }
 

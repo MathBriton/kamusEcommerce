@@ -1,7 +1,8 @@
 # Design · Vitrine (loja)
 
-Capturas do storefront (`apps/web`) geradas a partir da aplicação rodando, com o catálogo de
-exemplo. Os tokens de cor e fonte vivem em [`src/app/globals.css`](../src/app/globals.css).
+Capturas do storefront (`apps/web`) geradas pelos testes E2E, com o catálogo de exemplo. Os
+tokens de cor e fonte vivem em [`packages/tokens/theme.css`](../../../packages/tokens/theme.css),
+compartilhados com o backoffice. Fundamentos e componentes vêm da página `/design-system`.
 
 **Estilo:** espaçoso e editorial; serifa nos títulos, sans-serif no texto, foco em imagem.
 
@@ -42,4 +43,16 @@ O fluxo animado está em [`docs/media/fluxo-de-compra.gif`](../../../docs/media/
 
 - `fundamentos/`: marca, cores, tipografia. `componentes/`: peças isoladas. `telas/<área>/`: páginas.
 - Nomes em português, minúsculos, com hífen; sufixo `-desktop`/`-mobile` quando houver as duas.
-- Capturas em resolução 2x (desktop 1280px, mobile 390px de largura).
+- Capturas em resolução 1x (desktop 1280px, mobile 390px de largura).
+
+## Como estas imagens são geradas
+
+Elas são as **capturas de referência dos testes E2E** (`e2e/`, ADR 0013), produzidas numa stack
+isolada com banco zerado, sempre iguais:
+
+```bash
+./e2e/run.sh            # compara as telas atuais com estas imagens (o CI faz o mesmo)
+./e2e/run.sh --update   # aceita mudanças intencionais e reescreve as imagens
+```
+
+Áreas em tom areia cobrem valores que mudam a cada execução (datas, horas, ids).

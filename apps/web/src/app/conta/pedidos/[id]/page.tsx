@@ -46,7 +46,7 @@ export default async function OrderPage(props: PageProps<"/conta/pedidos/[id]">)
         <div>
           <h1 className="font-display text-4xl">Pedido {order.number}</h1>
           <p className="mt-1 text-sm text-muted">
-            Feito em {dateTime.format(new Date(order.createdAt))}
+            Feito em <span data-volatile>{dateTime.format(new Date(order.createdAt))}</span>
           </p>
         </div>
         <OrderStatusBadge status={order.status} />
@@ -129,7 +129,9 @@ export default async function OrderPage(props: PageProps<"/conta/pedidos/[id]">)
               {order.history.map((h, index) => (
                 <li key={index}>
                   <p className="font-medium">{ORDER_STATUS_LABEL[h.status]}</p>
-                  <p className="text-xs text-muted">{dateTime.format(new Date(h.at))}</p>
+                  <p className="text-xs text-muted" data-volatile>
+                    {dateTime.format(new Date(h.at))}
+                  </p>
                   {h.note && <p className="text-xs text-muted">{h.note}</p>}
                 </li>
               ))}

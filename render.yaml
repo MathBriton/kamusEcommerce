@@ -58,7 +58,7 @@ services:
     name: kamus-web
     runtime: docker
     plan: free
-    dockerContext: ./apps/web
+    dockerContext: .
     dockerfilePath: ./apps/web/Dockerfile
     envVars:
       - key: PORT
@@ -75,7 +75,7 @@ services:
     name: kamus-admin
     runtime: docker
     plan: free
-    dockerContext: ./apps/admin
+    dockerContext: .
     dockerfilePath: ./apps/admin/Dockerfile
     envVars:
       - key: PORT

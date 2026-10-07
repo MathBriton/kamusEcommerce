@@ -70,7 +70,8 @@ export default async function AccountPage() {
                 <div className="flex-1 text-sm">
                   <p className="font-medium">Pedido {order.number}</p>
                   <p className="text-muted">
-                    {dateFormat.format(new Date(order.createdAt))} · {order.itemCount} item(ns)
+                    <span data-volatile>{dateFormat.format(new Date(order.createdAt))}</span> ·{" "}
+                    {order.itemCount} item(ns)
                   </p>
                 </div>
                 <OrderStatusBadge status={order.status} />

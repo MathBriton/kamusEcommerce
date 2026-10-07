@@ -149,6 +149,7 @@ export function DailyRevenueChart({ data }: { data: Point[] }) {
                     />
                     {i % labelEvery === 0 && (
                       <text
+                        data-volatile
                         x={PAD.left + i * slot + slot / 2}
                         y={HEIGHT - 8}
                         textAnchor="middle"

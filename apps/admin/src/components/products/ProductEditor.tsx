@@ -31,6 +31,9 @@ type Props = {
 
 type Feedback = { ok: boolean; text: string } | null;
 
+/** Nome legível do SKU nas mensagens: "Areia · M". */
+const skuLabel = (sku: Sku) => `${sku.color} · ${sku.size === "U" ? "Único" : sku.size}`;
+
 /** Editor completo: dados, publicação, variações (SKU), preços, estoque e imagens por cor. */
 export function ProductEditor({ initial, categories, collections, storeUrl }: Props) {
   const [product, setProduct] = useState(initial);
@@ -80,7 +83,7 @@ export function ProductEditor({ initial, categories, collections, storeUrl }: Pr
     return call(
       `/api/admin/catalog/products/${product.id}`,
       { method: "GET" },
-      `Estoque de ${sku.code} ajustado.`,
+      `Estoque de ${skuLabel(sku)} ajustado.`,
     );
   }
 
@@ -143,7 +146,7 @@ export function ProductEditor({ initial, categories, collections, storeUrl }: Pr
       {feedback && <Alert tone={feedback.ok ? "success" : "error"}>{feedback.text}</Alert>}
 
       <div className="grid gap-6 lg:grid-cols-[1fr_380px]">
-        <div className="space-y-6">
+        <div className="min-w-0 space-y-6">
           <Card title="Variações e estoque">
             {product.skus.length === 0 ? (
               <p className="text-sm text-muted">
@@ -308,6 +311,7 @@ function SkuRow({
               {sku.color} · {sku.size === "U" ? "Único" : sku.size}
             </span>
             <span
+              data-volatile
               className="block max-w-40 truncate font-mono text-[11px] text-muted"
               title={sku.code}
             >
@@ -347,7 +351,7 @@ function SkuRow({
                     price: Number(price.replace(",", ".")),
                     salePrice: sale === "" ? null : Number(sale.replace(",", ".")),
                   }),
-                  `Preço de ${sku.code} atualizado.`,
+                  `Preço de ${skuLabel(sku)} atualizado.`,
                 )
               }
             >

@@ -3,9 +3,14 @@
 **/node_modules/
 **/.next/
 **/coverage/
+**/*.tsbuildinfo
+**/.env*
+!**/.env.example
 .git/
 .github/
+.devcontainer/
 docs/
+e2e/
 storage/
+apps/*/design/
 **/*.md
-!apps/web/**/*.md

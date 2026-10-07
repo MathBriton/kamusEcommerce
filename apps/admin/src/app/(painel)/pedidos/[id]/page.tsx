@@ -29,7 +29,8 @@ export default async function OrderPage(props: PageProps<"/pedidos/[id]">) {
           title={`Pedido ${order.number}`}
           description={
             <span className="flex items-center gap-3">
-              <StatusBadge status={order.status} /> Criado em {formatDateTime(order.createdAt)}
+              <StatusBadge status={order.status} /> Criado em{" "}
+              <span data-volatile>{formatDateTime(order.createdAt)}</span>
             </span>
           }
         />
@@ -88,7 +89,7 @@ export default async function OrderPage(props: PageProps<"/pedidos/[id]">) {
               {order.history.map((h, i) => (
                 <li key={i}>
                   <p className="font-medium">{ORDER_STATUS_LABEL[h.status]}</p>
-                  <p className="text-xs text-muted">
+                  <p data-volatile className="text-xs text-muted">
                     {formatDateTime(h.at)}
                     {h.note ? ` · ${h.note}` : ""}
                   </p>
@@ -130,7 +131,9 @@ export default async function OrderPage(props: PageProps<"/pedidos/[id]">) {
 
           {data.paymentId && (
             <Card title="Pagamento">
-              <p className="font-mono text-xs break-all text-muted">{data.paymentId}</p>
+              <p className="font-mono text-xs break-all text-muted" data-volatile>
+                {data.paymentId}
+              </p>
             </Card>
           )}
         </div>

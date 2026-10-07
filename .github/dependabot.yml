@@ -1,0 +1,38 @@
+# Atualizações semanais de dependências, agrupadas para não inundar o repositório de PRs.
+version: 2
+updates:
+  - package-ecosystem: nuget
+    directory: /
+    schedule: { interval: weekly, day: monday }
+    groups:
+      dotnet:
+        patterns: ["*"]
+
+  - package-ecosystem: npm
+    directory: /apps/web
+    schedule: { interval: weekly, day: monday }
+    groups:
+      web:
+        patterns: ["*"]
+
+  - package-ecosystem: npm
+    directory: /apps/admin
+    schedule: { interval: weekly, day: monday }
+    groups:
+      admin:
+        patterns: ["*"]
+
+  - package-ecosystem: npm
+    directory: /e2e
+    schedule: { interval: weekly, day: monday }
+    groups:
+      e2e:
+        patterns: ["*"]
+
+  - package-ecosystem: docker
+    directories: [/apps/api, /apps/web, /apps/admin]
+    schedule: { interval: weekly, day: monday }
+
+  - package-ecosystem: github-actions
+    directory: /
+    schedule: { interval: weekly, day: monday }

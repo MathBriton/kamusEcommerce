@@ -81,18 +81,23 @@ internal sealed class ReportingService(
 
     private async Task<IReadOnlyList<LowStockItem>> LowStockAsync(CancellationToken ct)
     {
-        var levels = await inventory.GetLowStockAsync(LowStockThreshold, 50, ct);
+        var levels = await inventory.GetLowStockAsync(LowStockThreshold, 500, ct);
         var skus = await catalog.GetSkusAsync([.. levels.Select(l => l.SkuId)], ct);
 
-        // Só SKUs de produtos publicados (os demais não estão à venda).
+        // Só SKUs de produtos publicados (os demais não estão à venda). Empates no disponível são
+        // desempatados por nome, cor e tamanho: a lista fica estável e fácil de ler.
         return [.. levels
             .Where(l => skus.ContainsKey(l.SkuId))
-            .Take(12)
             .Select(l =>
             {
                 var s = skus[l.SkuId];
                 return new LowStockItem(l.SkuId, s.Code, s.ProductName, s.Color, s.Size, l.Quantity, l.Reserved, l.Available);
-            })];
+            })
+            .OrderBy(i => i.Available)
+            .ThenBy(i => i.ProductName, StringComparer.Ordinal)
+            .ThenBy(i => i.Color, StringComparer.Ordinal)
+            .ThenBy(i => i.Code, StringComparer.Ordinal)
+            .Take(12)];
     }
 
     private static DateTimeOffset StartOfDayUtc(DateOnly date)

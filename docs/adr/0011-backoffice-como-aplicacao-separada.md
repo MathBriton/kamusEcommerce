@@ -39,8 +39,8 @@ ser indexado nem cacheado.
 
 ## Consequências
 
-- Os tokens de design existem em dois arquivos e precisam ser mantidos em sincronia; um pacote
-  compartilhado (`packages/ui`) é a evolução natural quando surgir um terceiro consumidor.
+- ~~Os tokens de design existem em dois arquivos~~ — resolvido na R8: os dois apps importam
+  `packages/tokens/theme.css`.
 - Mudanças feitas no admin aparecem na PLP em até 5 minutos (ISR, ADR 0006) e na PDP imediatamente
   (SSR). A revalidação sob demanda fica para a R4.
 - Mais um container para operar e publicar (incluído no Compose, no CI e no `render.yaml`).

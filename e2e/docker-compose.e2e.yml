@@ -1,0 +1,31 @@
+# Stack isolada para os testes E2E: mesma composição do docker-compose.yml, sem portas
+# publicadas (não conflita com a stack de desenvolvimento) e com o Playwright na mesma rede.
+# Uso: ./e2e/run.sh   (ou ./e2e/run.sh --update para aceitar mudanças visuais intencionais)
+services:
+  postgres:
+    ports: !reset []
+  redis:
+    ports: !reset []
+  api:
+    ports: !reset []
+  web:
+    ports: !reset []
+  admin:
+    ports: !reset []
+
+  playwright:
+    image: mcr.microsoft.com/playwright:v1.63.0-noble
+    working_dir: /repo/e2e
+    volumes:
+      # Caminhos relativos partem da raiz (diretório do docker-compose.yml principal).
+      - .:/repo
+    environment:
+      STORE_URL: http://web:3000
+      ADMIN_URL: http://admin:3001
+      API_URL: http://api:8080
+      CI: ${CI:-}
+      PLAYWRIGHT_ARGS: ${PLAYWRIGHT_ARGS:-}
+    command: ["sh", "-c", "npm ci --no-audit --no-fund && npx playwright test $$PLAYWRIGHT_ARGS"]
+    depends_on:
+      - web
+      - admin

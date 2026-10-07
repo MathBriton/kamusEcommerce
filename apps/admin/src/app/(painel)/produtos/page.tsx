@@ -132,7 +132,9 @@ export default async function ProductsPage(props: PageProps<"/produtos">) {
             >
               {formatInt(p.available)}
             </td>
-            <td className="px-4 py-2.5 text-xs text-muted">{formatDateTime(p.updatedAt)}</td>
+            <td className="px-4 py-2.5 text-xs text-muted" data-volatile>
+              {formatDateTime(p.updatedAt)}
+            </td>
           </tr>
         ))}
       </Table>

@@ -84,6 +84,36 @@ jobs:
       - name: Build API image
         run: docker build -f apps/api/Dockerfile -t kamus-api .
       - name: Build web image
-        run: docker build -t kamus-web apps/web
+        run: docker build -f apps/web/Dockerfile -t kamus-web .
       - name: Build admin image
-        run: docker build -t kamus-admin apps/admin
+        run: docker build -f apps/admin/Dockerfile -t kamus-admin .
+
+  e2e:
+    name: E2E e regressão visual
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: e2e/package-lock.json
+
+      - name: Lint dos testes
+        working-directory: e2e
+        run: npm ci && npm run format:check && npm run typecheck
+
+      - name: Fluxos de compra e backoffice + comparação com apps/*/design
+        run: ./e2e/run.sh
+
+      - name: Relatório (em caso de falha, inclui as diferenças visuais)
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: playwright-report
+          path: |
+            e2e/playwright-report
+            e2e/test-results
+          retention-days: 7

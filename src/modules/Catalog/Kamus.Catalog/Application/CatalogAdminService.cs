@@ -57,7 +57,7 @@ internal sealed class CatalogAdminService(
                 p.IsActive,
                 SkuIds = p.Skus.Select(s => s.Id).ToList(),
                 MinPrice = p.Skus.Min(s => (decimal?)(s.SalePrice ?? s.Price)),
-                Image = p.Images.OrderBy(i => i.SortOrder).Select(i => i.StorageKey).FirstOrDefault(),
+                Image = p.Images.OrderBy(i => i.SortOrder).ThenBy(i => i.Color).Select(i => i.StorageKey).FirstOrDefault(),
                 p.UpdatedAt,
             })
             .ToListAsync(ct);

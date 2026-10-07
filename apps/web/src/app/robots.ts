@@ -15,6 +15,7 @@ export default function robots(): MetadataRoute.Robots {
         "/carrinho",
         "/checkout",
         "/status",
+        "/design-system",
       ],
     },
     sitemap: `${siteUrl}/sitemap.xml`,

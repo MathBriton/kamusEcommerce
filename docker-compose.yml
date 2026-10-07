@@ -52,11 +52,13 @@ services:
 
   web:
     build:
-      context: apps/web
+      context: .
+      dockerfile: apps/web/Dockerfile
     environment:
       API_URL: http://api:8080
       SITE_URL: http://localhost:3000
       ENABLE_FULFILLMENT_SIMULATION: "true"
+      ENABLE_DESIGN_SYSTEM_PAGE: "true"
     ports:
       - "3000:3000"
     depends_on:
@@ -64,7 +66,8 @@ services:
 
   admin:
     build:
-      context: apps/admin
+      context: .
+      dockerfile: apps/admin/Dockerfile
     environment:
       API_URL: http://api:8080
       STORE_URL: http://localhost:3000

@@ -19,7 +19,9 @@ Roteiro e releases: [`stack.md`](stack.md). Decisões: [`docs/adr/`](docs/adr). 
 | `src/modules/<Modulo>/Kamus.<Modulo>.Contracts` | Contrato público (interfaces, DTOs, eventos) |
 | `src/shared/Kamus.Shared` | Building blocks (Result, IModule, eventos in-process, storage, paginação) |
 | `tests/` | Unitários, integração (Testcontainers) e arquitetura |
-| `apps/web/design`, `apps/admin/design` | Imagens do design system (vitrine e backoffice) |
+| `apps/web/design`, `apps/admin/design` | Imagens do design system = referências da regressão visual |
+| `packages/tokens` | Tokens de design (cores, fontes) compartilhados pelos dois fronts |
+| `e2e/` | Testes E2E e de regressão visual (Playwright) |
 
 Módulos: Catalog, Inventory, Cart, Orders, Payments, Identity, Reporting.
 
@@ -37,6 +39,10 @@ dotnet test --solution Kamus.slnx
 # Fronts (Node 22): rodar dentro de apps/web e de apps/admin
 npm ci
 npm run format:check && npm run lint && npm run typecheck && npm test && npm run build
+
+# E2E + regressão visual (só precisa de Docker): stack isolada, banco zerado
+./e2e/run.sh            # compara as telas com apps/*/design
+./e2e/run.sh --update   # mudança visual intencional: reescreve as imagens (revise o diff!)
 
 # Nova migration (exemplo no módulo Orders)
 dotnet tool restore
@@ -69,8 +75,12 @@ do CI em `.github/workflows/ci.yml`). Não suba código com teste falhando.
   construtor privado e métodos de domínio; erros esperados via `Result`/`Error`, não exceções.
 - **Front:** valide respostas da API com Zod; o navegador só fala com o próprio Next.js (BFF em
   `/api/*` e `/files/*`). Formatação com Prettier.
-- **Imagens de design:** ao capturar telas, salve em `apps/web/design/` (vitrine) ou
-  `apps/admin/design/` (backoffice), seguindo as convenções do README de cada pasta, e atualize o índice.
+- **Imagens de design:** são geradas pelos testes E2E (ADR 0013); não capture à mão. Tela nova ou
+  alterada → acrescente/ajuste o teste em `e2e/tests/` e rode `./e2e/run.sh --update`. Mantenha o
+  índice no README de `apps/*/design/`.
+- **Telas determinísticas:** valores que mudam a cada execução (datas, horas, ids) levam o atributo
+  `data-volatile`; ordenações sempre com desempate estável (nunca por id aleatório).
+- **Tokens de design** só em `packages/tokens/theme.css` (os dois apps importam esse arquivo).
 
 ## Armadilhas conhecidas
 
@@ -83,6 +93,9 @@ do CI em `.github/workflows/ci.yml`). Não suba código com teste falhando.
 - **Testes:** xUnit v3 sobre Microsoft.Testing.Platform (`dotnet test --solution ...`). O host de
   testes sobe uma vez por assembly (`KamusApiFactory`); testes de checkout e relatórios rodam na
   coleção sequencial `CheckoutCollection`.
+- **Next.js num monorepo:** `turbopack.root` e `outputFileTracingRoot` apontam para a raiz (por causa
+  de `packages/tokens`); os Dockerfiles dos fronts usam a raiz como contexto e o servidor standalone
+  fica em `apps/<app>/server.js`.
 - **Layout da loja** não pode ler cookies no servidor (tornaria as páginas ISR dinâmicas); dados de
   sessão no cabeçalho são carregados no cliente.
 

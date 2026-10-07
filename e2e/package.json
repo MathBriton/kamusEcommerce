@@ -1,0 +1,17 @@
+{
+  "name": "@kamus/e2e",
+  "private": true,
+  "scripts": {
+    "test": "playwright test",
+    "test:update": "playwright test --update-snapshots",
+    "typecheck": "tsc --noEmit",
+    "format": "prettier --write .",
+    "format:check": "prettier --check ."
+  },
+  "devDependencies": {
+    "@playwright/test": "1.63.0",
+    "@types/node": "^22",
+    "prettier": "^3.9.9",
+    "typescript": "^5"
+  }
+}

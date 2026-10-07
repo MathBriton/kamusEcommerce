@@ -38,7 +38,14 @@ export default async function DashboardPage(props: PageProps<"/">) {
     <>
       <PageHeader
         title="Painel"
-        description={`${formatDay(report.period.from)} a ${formatDay(report.period.to)} · horário de Brasília`}
+        description={
+          <>
+            <span data-volatile>
+              {formatDay(report.period.from)} a {formatDay(report.period.to)}
+            </span>{" "}
+            · horário de Brasília
+          </>
+        }
       />
 
       {/* Filtro de período: uma linha, acima de tudo o que ele afeta. */}

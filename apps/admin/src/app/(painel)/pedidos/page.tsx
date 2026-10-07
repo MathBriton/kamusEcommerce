@@ -104,7 +104,9 @@ export default async function OrdersPage(props: PageProps<"/pedidos">) {
                 {o.number}
               </Link>
             </td>
-            <td className="px-4 py-2.5 text-muted">{formatDateTime(o.createdAt)}</td>
+            <td className="px-4 py-2.5 text-muted" data-volatile>
+              {formatDateTime(o.createdAt)}
+            </td>
             <td className="px-4 py-2.5">
               {o.recipientName}
               <span className="block text-xs text-muted">

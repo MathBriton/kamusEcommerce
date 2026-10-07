@@ -1,5 +1,6 @@
 using Kamus.Shared.Infrastructure;
 using Kamus.Shared.Pagination;
+using Kamus.Shared.Text;
 
 namespace Kamus.UnitTests;
 
@@ -37,6 +38,21 @@ public sealed class SharedTests
     [InlineData("rediss://user:pw@cache:6380", "cache:6380,password=pw,user=user,ssl=true")]
     [InlineData("localhost:6379", "localhost:6379")]
     public void Converte_url_do_redis(string url, string expected) => ConnectionStrings.NormalizeRedis(url).Should().Be(expected);
+
+    [Fact]
+    public void Guid_deterministico_e_v7_e_reproduzivel()
+    {
+        var at = new DateTimeOffset(2026, 10, 7, 12, 0, 0, TimeSpan.Zero);
+
+        var a = DeterministicGuid.V7(at, "product:calca-jeans-slim");
+        var b = DeterministicGuid.V7(at, "product:calca-jeans-slim");
+        var c = DeterministicGuid.V7(at, "product:camiseta-basica");
+
+        a.Should().Be(b);
+        a.Should().NotBe(c);
+        a.Version.Should().Be(7);
+        DeterministicGuid.V7(at.AddMilliseconds(1), "x").CompareTo(DeterministicGuid.V7(at, "x")).Should().BePositive();
+    }
 
     private sealed record Sample(int Id, string Name);
 }

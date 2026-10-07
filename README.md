@@ -58,6 +58,8 @@ No ambiente de demonstração, a página do pedido tem botões para simular envi
 apps/api          Host ASP.NET Core do monólito
 apps/web          Storefront Next.js (App Router)
 apps/admin        Backoffice Next.js (catálogo, estoque, pedidos, relatórios)
+packages/tokens   Tokens de design compartilhados pelos dois fronts
+e2e/              Testes E2E e regressão visual (Playwright)
 src/modules/*     Módulos: Catalog, Inventory, Cart, Orders, Payments, Identity, Reporting
 src/shared        Building blocks (Result, IModule, infraestrutura)
 tests/            Testes unitários, de integração (Testcontainers) e de arquitetura
@@ -67,10 +69,18 @@ docs/             ADRs e diagramas C4
 ## Testes
 
 ```bash
-dotnet test --solution Kamus.slnx       # precisa do Docker rodando (Testcontainers)
-cd apps/web && npm test
-cd apps/admin && npm test
+dotnet test --solution Kamus.slnx       # unitários, integração (Testcontainers) e arquitetura
+cd apps/web && npm test                 # idem em apps/admin
+./e2e/run.sh                            # E2E no navegador + regressão visual (só precisa de Docker)
 ```
+
+Os testes E2E percorrem a compra completa e a operação do backoffice, e comparam cada tela com as
+imagens do design system ([vitrine](apps/web/design/README.md), [backoffice](apps/admin/design/README.md)).
+
+## Sem Docker na máquina? Use o Codespaces
+
+No GitHub: **Code → Codespaces → Create codespace on main**. O ambiente já vem com .NET, Node e
+Docker; a stack sobe sozinha e a loja abre no navegador (portas 3000, 3001 e 5080).
 
 ## Deploy
 

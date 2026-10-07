@@ -1,21 +1,6 @@
 @import "tailwindcss";
-
-/* Identidade visual Kamus: tons de areia, tinta e terracota. */
-@theme {
-  --color-ink: #1c1917;
-  --color-paper: #faf8f5;
-  --color-surface: #ffffff;
-  --color-sand: #ede6db;
-  --color-line: #e2dbd0;
-  --color-muted: #625b55;
-  --color-accent: #b4532a;
-  --color-accent-dark: #8f3f1f;
-  --color-sale: #b91c1c;
-
-  --font-sans:
-    ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
-  --font-display: "Iowan Old Style", "Palatino Linotype", Palatino, Georgia, serif;
-}
+/* Tokens compartilhados com o outro app: packages/tokens/theme.css */
+@import "../../../../packages/tokens/theme.css";
 
 body {
   background: var(--color-paper);

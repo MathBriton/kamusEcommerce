@@ -4,7 +4,7 @@
 > Domínio inspirado em lojas de moda brasileiras; marca, identidade visual e conteúdo são próprios.
 
 **Codinome do projeto:** `Kamus`
-**Status:** R2.5 concluída; próxima: R8 (Qualidade contínua). Deploy público adiado por decisão.
+**Status:** R8 concluída; próxima: R12 (Auditoria & Exclusão segura). Deploy público adiado por decisão.
 **Última revisão:** 2026-10-06
 
 ---
@@ -76,8 +76,8 @@ de execução. Releases *planejadas* tiveram o escopo aprovado e ainda não come
 | 2 | R1 | Vitrine | Catálogo navegável com SSR | ✅ concluída |
 | 3 | R2 | Compra | Conta, carrinho, checkout, pedido | ✅ concluída **(MVP)**; deploy público adiado |
 | 4 | R2.5 | Backoffice | Admin de catálogo, estoque e pedidos; relatórios | ✅ concluída |
-| 5 | R8 | Qualidade contínua | Testes E2E no CI, regressão visual, dependências | *planejada* · próxima |
-| 6 | R12 | Auditoria & Exclusão segura | Log de auditoria, soft delete, lixeira no backoffice | *planejada* |
+| 5 | R8 | Qualidade contínua | Testes E2E no CI, regressão visual, dependências | ✅ concluída |
+| 6 | R12 | Auditoria & Exclusão segura | Log de auditoria, soft delete, lixeira no backoffice | *planejada* · próxima |
 | 7 | R3 | Eventos & Busca | Outbox, mensageria, busca facetada, read models | — |
 | 8 | R6 | Operação | Observabilidade, testes de carga, resiliência | — |
 | 9 | R9 | Promoções | Cupons, regras de preço, campanhas | *planejada* |
@@ -273,14 +273,18 @@ rastreio pelo admin e os relatórios batem com os pedidos dos testes de integra�
 - Ambientes de staging e produção, com preview por PR
 - Avaliar a extração do primeiro módulo para serviço, se algum ADR justificar
 
-### R8 — Qualidade contínua *(planejada · próxima)*
+### R8 — Qualidade contínua ✅
 
 - **Testes E2E com Playwright no CI**: fluxo de compra completo (vitrine → pagamento) e fluxo do
   backoffice (criar, publicar, despachar)
 - **Regressão visual**: o mesmo roteiro gera as imagens de `apps/web/design` e `apps/admin/design`
   e falha o CI se uma tela mudar sem querer (as imagens do design system passam a se atualizar sozinhas)
-- Dependabot e CodeQL; pacote compartilhado de tokens de design (`packages/ui`) entre loja e admin
+- Dependabot e CodeQL; pacote compartilhado de tokens de design (`packages/tokens`) entre loja e admin
 - Codespaces/devcontainer para rodar tudo no navegador, sem Docker local
+- ADR 0013 — Testes E2E e regressão visual com as imagens do design system
+
+**Entregue:** 23 testes E2E (vitrine, compra, backoffice) comparando 28 telas com tolerância de 50
+pixels, estáveis em execuções repetidas; seed com ids determinísticos; página `/design-system`.
 
 ### R9 — Promoções *(planejada)*
 
@@ -299,7 +303,7 @@ rastreio pelo admin e os relatórios batem com os pedidos dos testes de integra�
   auditoria da R12 para registrar acessos sensíveis
 - Cabeçalhos de segurança e Content Security Policy na loja e no admin; revisão OWASP Top 10
 
-### R12 — Auditoria & Exclusão segura *(planejada)*
+### R12 — Auditoria & Exclusão segura *(planejada · próxima)*
 
 **Objetivo:** saber sempre quem fez o quê, quando e qual era o valor anterior, e nunca perder um
 dado por um clique errado no backoffice.
@@ -365,3 +369,4 @@ produto excluído some da loja e do admin, aparece na Lixeira e volta intacto ao
 | 2026-10-07 | R2.5 | Backoffice entregue: papel Admin, app `apps/admin`, CRUD de catálogo com upload, estoque, operação de pedidos e módulo Reporting; ADRs 0011–0012 |
 | 2026-10-07 | — | Roteiro reordenado (R3 → R6 antes de R4/R5); pendências dos ADRs incorporadas; propostas R8–R11 |
 | 2026-10-07 | — | Propostas R8–R11 aprovadas; nova R12 (Auditoria & Exclusão segura), logo após a R8 |
+| 2026-10-07 | R8 | Qualidade contínua: E2E + regressão visual (Playwright em container), `packages/tokens`, página `/design-system`, Dependabot, CodeQL, devcontainer; ADR 0013 |
