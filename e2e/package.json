@@ -10,8 +10,8 @@
   },
   "devDependencies": {
     "@playwright/test": "1.63.0",
-    "@types/node": "^22",
+    "@types/node": "^26",
     "prettier": "^3.9.9",
-    "typescript": "^5"
+    "typescript": "^7"
   }
 }
