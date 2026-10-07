@@ -11,7 +11,8 @@
 - MVP concluído: **R0** (fundação), **R1** (vitrine), **R2** (compra) e **R2.5** (backoffice).
 - `main` atualizada e com CI verde (API, Web, Admin e imagens Docker).
 - Deploy público **adiado por decisão do responsável**; `render.yaml` e `docs/deploy.md` estão prontos.
-- Roteiro reordenado em `stack.md`: próxima release é a **R8 — Qualidade contínua** (proposta).
+- Roteiro em `stack.md` aprovado: próxima release é a **R8 — Qualidade contínua**, seguida da
+  **R12 — Auditoria & Exclusão segura** (log de auditoria e soft delete, pedido do responsável).
 
 ## Próximo passo sugerido: R8 — Qualidade contínua
 
@@ -26,7 +27,8 @@ Escopo completo e ordem das demais releases: `stack.md`, seção 3.
 
 ## Decisões em aberto
 
-- Releases **R8 a R11** estão como *proposta*: confirmar escopo antes de implementar.
+- Releases R8 a R12 aprovadas. Na R12, decidir no ADR: auditoria por interceptor do EF Core +
+  módulo Audit (recomendado) vs. triggers no banco.
 - Quando publicar: Render para tudo (blueprint pronto, recomendado) ou híbrido, com os fronts na
   Vercel e API + Postgres + Redis no Render. O híbrido exige ler `VERCEL_PROJECT_PRODUCTION_URL`
   em `apps/web/src/lib/env.ts` e um blueprint só com a API.
