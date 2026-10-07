@@ -5,6 +5,7 @@ using Kamus.Identity.Domain;
 using Kamus.Identity.Persistence;
 using Kamus.Shared.Infrastructure;
 using Kamus.Shared.Modules;
+using Kamus.Shared.Security;
 using Microsoft.AspNetCore.DataProtection;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Identity;
@@ -25,7 +26,8 @@ public sealed class IdentityModule : IModule
         services.AddModuleDbContext<KamusIdentityDbContext>(KamusIdentityDbContext.Schema);
 
         services.AddAuthentication(IdentityConstants.ApplicationScheme).AddIdentityCookies();
-        services.AddAuthorization();
+        services.AddAuthorizationBuilder()
+            .AddPolicy(AdminAccess.Policy, policy => policy.RequireRole(AdminAccess.Role));
 
         services.AddIdentityCore<KamusUser>(options =>
             {
@@ -36,6 +38,7 @@ public sealed class IdentityModule : IModule
                 options.Lockout.MaxFailedAccessAttempts = 5;
                 options.Lockout.DefaultLockoutTimeSpan = TimeSpan.FromMinutes(5);
             })
+            .AddRoles<IdentityRole<Guid>>()
             .AddEntityFrameworkStores<KamusIdentityDbContext>()
             .AddSignInManager()
             .AddErrorDescriber<PortugueseIdentityErrorDescriber>();
@@ -67,6 +70,8 @@ public sealed class IdentityModule : IModule
             .PersistKeysToDbContext<KamusIdentityDbContext>();
 
         services.AddScoped<ICustomerDirectory, CustomerDirectory>();
+        services.Configure<AdminUserOptions>(configuration.GetSection(AdminUserOptions.SectionName));
+        services.AddScoped<IDataSeeder, AdminUserSeeder>();
         services.AddValidatorsFromAssemblyContaining<IdentityModule>(includeInternalTypes: true);
     }
 

@@ -2,6 +2,7 @@ using Kamus.Inventory.Contracts;
 using Kamus.Inventory.Domain;
 using Kamus.Inventory.Persistence;
 using Kamus.Shared.Infrastructure;
+using Kamus.Shared.Results;
 using Microsoft.EntityFrameworkCore;
 
 namespace Kamus.Inventory.Application;
@@ -18,6 +19,47 @@ internal sealed class InventoryService(InventoryDbContext db, TimeProvider clock
         // SKU sem registro de estoque = indisponível
         return skuIds.Distinct().ToDictionary(id => id, id => Math.Max(0, levels.GetValueOrDefault(id)));
     }
+
+    public async Task<IReadOnlyDictionary<Guid, StockLevelInfo>> GetStockLevelsAsync(IReadOnlyCollection<Guid> skuIds, CancellationToken cancellationToken = default)
+    {
+        var levels = await db.StockLevels.AsNoTracking()
+            .Where(s => skuIds.Contains(s.SkuId))
+            .ToDictionaryAsync(s => s.SkuId, s => new StockLevelInfo(s.SkuId, s.Quantity, s.Reserved), cancellationToken);
+
+        return skuIds.Distinct().ToDictionary(id => id, id => levels.GetValueOrDefault(id) ?? new StockLevelInfo(id, 0, 0));
+    }
+
+    public async Task<IReadOnlyList<StockLevelInfo>> GetLowStockAsync(int threshold, int limit, CancellationToken cancellationToken = default) =>
+        await db.StockLevels.AsNoTracking()
+            .Where(s => s.Quantity - s.Reserved <= threshold)
+            .OrderBy(s => s.Quantity - s.Reserved).ThenBy(s => s.SkuId)
+            .Take(limit)
+            .Select(s => new StockLevelInfo(s.SkuId, s.Quantity, s.Reserved))
+            .ToListAsync(cancellationToken);
+
+    /// <summary>Ajuste manual do backoffice. Não pode ficar abaixo do que já está reservado.</summary>
+    public Task<Result<StockLevelInfo>> AdjustAsync(Guid skuId, int quantity, CancellationToken cancellationToken) =>
+        ConcurrencyRetry.ExecuteAsync(db, async () =>
+        {
+            var level = await db.StockLevels.FindAsync([skuId], cancellationToken);
+            if (level is null)
+            {
+                level = new StockLevel(skuId, quantity);
+                db.StockLevels.Add(level);
+            }
+            else if (quantity < level.Reserved)
+            {
+                return Result.Failure<StockLevelInfo>(Error.Conflict("inventory.below_reserved",
+                    $"Há {level.Reserved} unidade(s) reservada(s) para pedidos em pagamento; o estoque não pode ficar abaixo disso."));
+            }
+            else
+            {
+                level.SetQuantity(quantity);
+            }
+
+            await db.SaveChangesAsync(cancellationToken);
+            return Result.Success(new StockLevelInfo(level.SkuId, level.Quantity, level.Reserved));
+        });
 
     public async Task SetStockAsync(IReadOnlyDictionary<Guid, int> quantities, CancellationToken cancellationToken = default)
     {

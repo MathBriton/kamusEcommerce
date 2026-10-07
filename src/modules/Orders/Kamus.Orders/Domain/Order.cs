@@ -53,6 +53,9 @@ internal sealed class Order
 
     public Guid? PaymentId { get; private set; }
 
+    /// <summary>Código de rastreio informado no despacho.</summary>
+    public string? TrackingCode { get; private set; }
+
     public DateTimeOffset CreatedAt { get; private set; }
 
     public DateTimeOffset UpdatedAt { get; private set; }
@@ -97,7 +100,16 @@ internal sealed class Order
 
     public Result Cancel(string reason, DateTimeOffset now) => TransitionTo(OrderStatus.Cancelled, now, reason);
 
-    public Result Ship(DateTimeOffset now) => TransitionTo(OrderStatus.Shipped, now);
+    public Result Ship(DateTimeOffset now, string? trackingCode = null)
+    {
+        var result = TransitionTo(OrderStatus.Shipped, now, trackingCode is null ? null : $"Rastreio: {trackingCode}");
+        if (result.IsSuccess)
+        {
+            TrackingCode = trackingCode;
+        }
+
+        return result;
+    }
 
     public Result Deliver(DateTimeOffset now) => TransitionTo(OrderStatus.Delivered, now);
 

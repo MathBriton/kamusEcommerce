@@ -16,7 +16,7 @@ public sealed record RegisterRequest(string Email, string Password, string FullN
 
 public sealed record LoginRequest(string Email, string Password);
 
-public sealed record MeResponse(Guid Id, string Email, string FullName);
+public sealed record MeResponse(Guid Id, string Email, string FullName, bool IsAdmin = false);
 
 /// <summary>Estado da sessão sem erro 401: usado pelo cabeçalho do site para visitantes anônimos.</summary>
 public sealed record SessionResponse(bool Authenticated, MeResponse? User);
@@ -118,7 +118,7 @@ internal static class IdentityEndpoints
         }
 
         await events.PublishAsync(new CustomerSignedIn(user.Id), ct);
-        return TypedResults.Ok(new MeResponse(user.Id, user.Email!, user.FullName));
+        return TypedResults.Ok(new MeResponse(user.Id, user.Email!, user.FullName, await users.IsInRoleAsync(user, AdminAccess.Role)));
     }
 
     private static async Task<IResult> MeAsync(HttpContext http, UserManager<KamusUser> users)
@@ -126,7 +126,7 @@ internal static class IdentityEndpoints
         var user = await users.FindByIdAsync(http.User.GetRequiredCustomerId().ToString());
         return user is null
             ? TypedResults.Unauthorized()
-            : TypedResults.Ok(new MeResponse(user.Id, user.Email!, user.FullName));
+            : TypedResults.Ok(new MeResponse(user.Id, user.Email!, user.FullName, http.User.IsInRole(AdminAccess.Role)));
     }
 
     private static async Task<IResult> SessionAsync(HttpContext http, UserManager<KamusUser> users)
@@ -135,7 +135,7 @@ internal static class IdentityEndpoints
         var user = id is null ? null : await users.FindByIdAsync(id.Value.ToString());
         return TypedResults.Ok(user is null
             ? new SessionResponse(false, null)
-            : new SessionResponse(true, new MeResponse(user.Id, user.Email!, user.FullName)));
+            : new SessionResponse(true, new MeResponse(user.Id, user.Email!, user.FullName, http.User.IsInRole(AdminAccess.Role))));
     }
 
     // Mesma mensagem para e-mail inexistente e senha errada: não revela quais e-mails têm conta.

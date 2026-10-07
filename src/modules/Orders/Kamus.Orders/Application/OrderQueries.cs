@@ -70,9 +70,11 @@ internal sealed class OrderQueries(OrdersDbContext db, IInventoryService invento
         return ToDetail(order);
     }
 
+    public static Error NotFoundError() => NotFound();
+
     private static Error NotFound() => Error.NotFound("orders.not_found", "Pedido não encontrado.");
 
-    private static OrderDetailDto ToDetail(Order o) => new(
+    internal static OrderDetailDto ToDetail(Order o) => new(
         o.Id,
         o.DisplayNumber,
         o.Status.ToString(),
@@ -83,5 +85,6 @@ internal sealed class OrderQueries(OrdersDbContext db, IInventoryService invento
         o.Total,
         o.CreatedAt,
         [.. o.History.Select(h => new OrderStatusChangeDto(h.Status.ToString(), h.At, h.Note))],
-        OrderStateMachine.CanTransition(o.Status, OrderStatus.Cancelled));
+        OrderStateMachine.CanTransition(o.Status, OrderStatus.Cancelled),
+        o.TrackingCode);
 }

@@ -7,6 +7,7 @@
     <ProjectReference Include="../../Catalog/Kamus.Catalog.Contracts/Kamus.Catalog.Contracts.csproj" />
     <ProjectReference Include="../../Inventory/Kamus.Inventory.Contracts/Kamus.Inventory.Contracts.csproj" />
     <ProjectReference Include="../../Payments/Kamus.Payments.Contracts/Kamus.Payments.Contracts.csproj" />
+    <ProjectReference Include="../../Identity/Kamus.Identity.Contracts/Kamus.Identity.Contracts.csproj" />
   </ItemGroup>
 
   <ItemGroup>

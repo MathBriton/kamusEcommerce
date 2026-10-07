@@ -6,6 +6,12 @@ public interface IInventoryService
     /// <summary>Quantidade disponível para venda (estoque físico menos reservas ativas) por SKU.</summary>
     Task<IReadOnlyDictionary<Guid, int>> GetAvailabilityAsync(IReadOnlyCollection<Guid> skuIds, CancellationToken cancellationToken = default);
 
+    /// <summary>Estoque físico, reservado e disponível por SKU (backoffice e relatórios).</summary>
+    Task<IReadOnlyDictionary<Guid, StockLevelInfo>> GetStockLevelsAsync(IReadOnlyCollection<Guid> skuIds, CancellationToken cancellationToken = default);
+
+    /// <summary>SKUs com disponível menor ou igual ao limite, do menor para o maior.</summary>
+    Task<IReadOnlyList<StockLevelInfo>> GetLowStockAsync(int threshold, int limit, CancellationToken cancellationToken = default);
+
     /// <summary>Define o estoque físico de SKUs (usado por seed e, futuramente, pelo painel administrativo).</summary>
     Task SetStockAsync(IReadOnlyDictionary<Guid, int> quantities, CancellationToken cancellationToken = default);
 
@@ -23,6 +29,11 @@ public interface IInventoryService
 
     /// <summary>Libera a reserva (pagamento recusado ou pedido cancelado). Idempotente.</summary>
     Task ReleaseReservationAsync(Guid orderId, CancellationToken cancellationToken = default);
+}
+
+public sealed record StockLevelInfo(Guid SkuId, int Quantity, int Reserved)
+{
+    public int Available => Math.Max(0, Quantity - Reserved);
 }
 
 public sealed record ReservationLine(Guid SkuId, int Quantity);

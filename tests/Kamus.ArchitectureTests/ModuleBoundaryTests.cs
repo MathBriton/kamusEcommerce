@@ -8,7 +8,7 @@ namespace Kamus.ArchitectureTests;
 /// </summary>
 public sealed class ModuleBoundaryTests
 {
-    private static readonly string[] Modules = ["Catalog", "Inventory", "Cart", "Orders", "Payments", "Identity"];
+    private static readonly string[] Modules = ["Catalog", "Inventory", "Cart", "Orders", "Payments", "Identity", "Reporting"];
 
     public static TheoryData<string> ModuleNames => new(Modules);
 

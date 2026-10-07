@@ -1,0 +1,16 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <ItemGroup>
+    <ProjectReference Include="../../../shared/Kamus.Shared/Kamus.Shared.csproj" />
+    <ProjectReference Include="../Kamus.Reporting.Contracts/Kamus.Reporting.Contracts.csproj" />
+    <ProjectReference Include="../../Orders/Kamus.Orders.Contracts/Kamus.Orders.Contracts.csproj" />
+    <ProjectReference Include="../../Inventory/Kamus.Inventory.Contracts/Kamus.Inventory.Contracts.csproj" />
+    <ProjectReference Include="../../Catalog/Kamus.Catalog.Contracts/Kamus.Catalog.Contracts.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <InternalsVisibleTo Include="Kamus.IntegrationTests" />
+    <InternalsVisibleTo Include="Kamus.UnitTests" />
+  </ItemGroup>
+
+</Project>

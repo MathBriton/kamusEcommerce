@@ -9,10 +9,6 @@ internal static class ModuleInitializer
     {
         var migrate = app.Configuration.GetValue<bool>("Database:MigrateOnStartup");
         var seed = app.Configuration.GetValue<bool>("Seed:Enabled");
-        if (!migrate && !seed)
-        {
-            return;
-        }
 
         await using var scope = app.Services.CreateAsyncScope();
         var ct = app.Lifetime.ApplicationStopping;
@@ -25,12 +21,13 @@ internal static class ModuleInitializer
             }
         }
 
-        if (seed)
+        var seeders = scope.ServiceProvider.GetServices<IDataSeeder>()
+            .Where(s => seed || !s.IsSampleData)
+            .OrderBy(s => s.Order);
+
+        foreach (var seeder in seeders)
         {
-            foreach (var seeder in scope.ServiceProvider.GetServices<IDataSeeder>().OrderBy(s => s.Order))
-            {
-                await seeder.SeedAsync(ct);
-            }
+            await seeder.SeedAsync(ct);
         }
     }
 }

@@ -72,6 +72,7 @@ Regra de dependência: um módulo expõe apenas um contrato público (interfaces
 | R0 | Fundação | Repo, CI, ambiente local, esqueleto | ✅ (concluída) |
 | R1 | Vitrine | Catálogo navegável com SSR | ✅ (concluída) |
 | R2 | Compra | Conta, carrinho, checkout, pedido | ✅ **(MVP fecha aqui)** (concluída; falta publicar) |
+| R2.5 | Backoffice | Admin de catálogo, estoque e pedidos; relatórios | — |
 | R3 | Eventos & Busca | Outbox, mensageria, busca facetada | — |
 | R4 | Conteúdo & Mídia | CMS headless, storage S3, CDN | — |
 | R5 | Integrações | Reviews, trocas, newsletter, cashback | — |
@@ -172,6 +173,38 @@ Regra de dependência: um módulo expõe apenas um contrato público (interfaces
 
 ---
 
+### R2.5 — Backoffice
+
+**Objetivo:** a operação da loja deixa de depender de seed e de botões de simulação: uma equipe
+interna cadastra produtos, ajusta estoque, despacha pedidos e acompanha os números.
+
+**Acesso**
+- Papel `Admin` no Identity; endpoints em `/api/admin/*` exigem a policy `Admin`
+- Usuário administrador criado na inicialização a partir de configuração (`Admin:Email`, `Admin:Password`)
+
+**Catálogo e estoque**
+- Lista de produtos com busca (inclui inativos), criação e edição de produto
+- SKUs: adicionar cor/tamanho, alterar preço e preço promocional
+- Upload de imagens por cor (JPEG, PNG ou WebP, validados pelo conteúdo) e remoção
+- Ativar/desativar produto; ajuste de estoque físico por SKU, com reservado e disponível visíveis
+
+**Pedidos**
+- Lista com filtro por status, detalhe, despacho com código de rastreio, confirmação de entrega e cancelamento
+
+**Relatórios** (módulo `Reporting`, que compõe dados via contratos dos outros módulos)
+- Faturamento, pedidos, ticket médio e unidades no período; faturamento por dia
+- Pedidos por status, taxa de pagamento recusado e de cancelamento
+- Produtos mais vendidos e itens com estoque baixo
+
+**Front:** app separado `apps/admin` (Next.js), com o mesmo design system em versão densa.
+
+**ADRs**
+- 0011 — Backoffice como aplicação separada
+- 0012 — Relatórios compostos por contratos (e evolução para read models na R3)
+
+**Pronto quando:** um produto criado no admin aparece na loja, um pedido pago é despachado com
+rastreio pelo admin e os relatórios batem com os pedidos dos testes de integração.
+
 ### R3 — Eventos & Busca *(futuro)*
 
 - **Outbox pattern** nos módulos Orders e Catalog
@@ -211,7 +244,6 @@ Regra de dependência: um módulo expõe apenas um contrato público (interfaces
 
 - Lista de desejos
 - Cupons e regras de promoção
-- Painel administrativo (catálogo, pedidos, estoque)
 - Recomendação "quem viu também viu"
 - Multi-idioma e multi-moeda
 - PWA

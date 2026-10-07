@@ -60,4 +60,22 @@ public sealed record OrderDetailDto(
     decimal Total,
     DateTimeOffset CreatedAt,
     IReadOnlyList<OrderStatusChangeDto> History,
-    bool CanCancel);
+    bool CanCancel,
+    string? TrackingCode = null);
+
+public sealed record AdminOrderRow(
+    Guid Id,
+    string Number,
+    string Status,
+    decimal Total,
+    int ItemCount,
+    string RecipientName,
+    string City,
+    string State,
+    DateTimeOffset CreatedAt);
+
+public sealed record AdminOrderDetail(OrderDetailDto Order, Guid CustomerId, string? CustomerEmail, string? CustomerName, Guid? PaymentId);
+
+public sealed record ShipOrderRequest(string TrackingCode);
+
+public sealed record CancelOrderRequest(string Reason);

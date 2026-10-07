@@ -21,9 +21,14 @@ public sealed class CatalogModule : IModule
         services.AddModuleDbContext<CatalogDbContext>(CatalogDbContext.Schema);
         services.AddScoped<CatalogQueries>();
         services.AddScoped<ICatalogService, CatalogService>();
+        services.AddScoped<CatalogAdminService>();
         services.AddScoped<IDataSeeder, CatalogSeeder>();
         services.AddValidatorsFromAssemblyContaining<CatalogModule>(includeInternalTypes: true);
     }
 
-    public void MapEndpoints(IEndpointRouteBuilder endpoints) => CatalogEndpoints.Map(endpoints);
+    public void MapEndpoints(IEndpointRouteBuilder endpoints)
+    {
+        CatalogEndpoints.Map(endpoints);
+        CatalogAdminEndpoints.Map(endpoints);
+    }
 }

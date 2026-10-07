@@ -19,6 +19,14 @@ internal sealed class CatalogDbContext(DbContextOptions<CatalogDbContext> option
     {
         modelBuilder.HasDefaultSchema(Schema);
 
+        // Ids são gerados na aplicação (Guid v7). Sem isso, o EF trata um SKU ou imagem novos,
+        // adicionados a um produto já carregado, como linhas existentes (UPDATE em vez de INSERT).
+        modelBuilder.Entity<Category>().Property(c => c.Id).ValueGeneratedNever();
+        modelBuilder.Entity<Collection>().Property(c => c.Id).ValueGeneratedNever();
+        modelBuilder.Entity<Product>().Property(p => p.Id).ValueGeneratedNever();
+        modelBuilder.Entity<Sku>().Property(s => s.Id).ValueGeneratedNever();
+        modelBuilder.Entity<ProductImage>().Property(i => i.Id).ValueGeneratedNever();
+
         modelBuilder.Entity<Category>(b =>
         {
             b.Property(c => c.Name).HasMaxLength(100);

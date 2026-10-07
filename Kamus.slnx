@@ -29,6 +29,10 @@
     <Project Path="src/modules/Payments/Kamus.Payments.Contracts/Kamus.Payments.Contracts.csproj" />
     <Project Path="src/modules/Payments/Kamus.Payments/Kamus.Payments.csproj" />
   </Folder>
+  <Folder Name="/src/modules/Reporting/">
+    <Project Path="src/modules/Reporting/Kamus.Reporting.Contracts/Kamus.Reporting.Contracts.csproj" />
+    <Project Path="src/modules/Reporting/Kamus.Reporting/Kamus.Reporting.csproj" />
+  </Folder>
   <Folder Name="/src/shared/">
     <Project Path="src/shared/Kamus.Shared/Kamus.Shared.csproj" />
   </Folder>

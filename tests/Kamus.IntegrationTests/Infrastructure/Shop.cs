@@ -38,6 +38,15 @@ internal sealed class Shop(KamusApiFactory factory)
         return client;
     }
 
+    /// <summary>Cliente HTTP autenticado como o administrador criado na inicialização (appsettings.Testing).</summary>
+    public async Task<HttpClient> AdminAsync()
+    {
+        var client = factory.CreateClient();
+        var response = await client.PostAsJsonAsync("/api/identity/login", new { email = "admin@kamus.test", password = "admin-teste-123" }, Ct);
+        response.StatusCode.Should().Be(HttpStatusCode.OK);
+        return client;
+    }
+
     public static async Task AddToCartAsync(HttpClient client, Guid skuId, int quantity = 1)
     {
         var response = await client.PostAsJsonAsync("/api/cart/items", new { skuId, quantity }, Ct);

@@ -4,6 +4,7 @@ using Kamus.Identity;
 using Kamus.Inventory;
 using Kamus.Orders;
 using Kamus.Payments;
+using Kamus.Reporting;
 using Kamus.Shared.Modules;
 
 namespace Kamus.Api;
@@ -19,5 +20,6 @@ internal static class ModuleRegistry
         new OrdersModule(),
         new PaymentsModule(),
         new IdentityModule(),
+        new ReportingModule(),
     ];
 }

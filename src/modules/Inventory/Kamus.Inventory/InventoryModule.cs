@@ -1,3 +1,5 @@
+using FluentValidation;
+using Kamus.Inventory.Api;
 using Kamus.Inventory.Application;
 using Kamus.Inventory.Contracts;
 using Kamus.Inventory.Persistence;
@@ -21,9 +23,8 @@ public sealed class InventoryModule : IModule
         services.AddScoped<IInventoryService>(sp => sp.GetRequiredService<InventoryService>());
         services.AddSingleton<ReservationExpiryWorker>();
         services.AddHostedService(sp => sp.GetRequiredService<ReservationExpiryWorker>());
+        services.AddValidatorsFromAssemblyContaining<InventoryModule>(includeInternalTypes: true);
     }
 
-    public void MapEndpoints(IEndpointRouteBuilder endpoints)
-    {
-    }
+    public void MapEndpoints(IEndpointRouteBuilder endpoints) => InventoryAdminEndpoints.Map(endpoints);
 }

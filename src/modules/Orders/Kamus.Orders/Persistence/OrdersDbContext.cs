@@ -23,6 +23,9 @@ internal sealed class OrdersDbContext(DbContextOptions<OrdersDbContext> options)
             b.Property(o => o.Subtotal).HasPrecision(10, 2);
             b.Property(o => o.Total).HasPrecision(10, 2);
             b.Property(o => o.Version).IsRowVersion();
+            b.Property(o => o.TrackingCode).HasMaxLength(50);
+            b.HasIndex(o => new { o.Status, o.CreatedAt });
+            b.HasIndex(o => o.CreatedAt);
             b.Ignore(o => o.DisplayNumber);
 
             b.OwnsOne(o => o.Address, a =>

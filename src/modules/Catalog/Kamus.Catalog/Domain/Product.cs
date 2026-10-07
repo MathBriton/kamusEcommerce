@@ -55,18 +55,74 @@ internal sealed class Product
 
     public Sku AddSku(string code, ColorInfo color, string size, int sizeOrder, decimal price, decimal? salePrice)
     {
-        if (salePrice is not null && salePrice >= price)
+        Sku.EnsureValidPrices(price, salePrice);
+        if (_skus.Any(s => s.Color == color.Name && s.Size == size))
         {
-            throw new ArgumentException("O preço promocional precisa ser menor que o preço cheio.", nameof(salePrice));
+            throw new InvalidOperationException($"Já existe o SKU {color.Name}/{size} neste produto.");
         }
 
         var sku = new Sku(Id, code, color, size, sizeOrder, price, salePrice);
         _skus.Add(sku);
+        UpdatedAt = DateTimeOffset.UtcNow;
         return sku;
     }
 
-    public void AddImage(string color, string storageKey, string alt) =>
-        _images.Add(new ProductImage(Id, color, storageKey, alt, _images.Count(i => i.Color == color)));
+    public ProductImage AddImage(string color, string storageKey, string alt)
+    {
+        var image = new ProductImage(Id, color, storageKey, alt, _images.Count(i => i.Color == color));
+        _images.Add(image);
+        UpdatedAt = DateTimeOffset.UtcNow;
+        return image;
+    }
+
+    public ProductImage? RemoveImage(Guid imageId)
+    {
+        var image = _images.FirstOrDefault(i => i.Id == imageId);
+        if (image is not null)
+        {
+            _images.Remove(image);
+            UpdatedAt = DateTimeOffset.UtcNow;
+        }
+
+        return image;
+    }
+
+    /// <summary>O slug não muda depois de criado: ele faz parte das URLs já indexadas.</summary>
+    public void Update(string name, string description, string brand, Guid categoryId, Guid? collectionId, DateTimeOffset now)
+    {
+        Name = name;
+        Description = description;
+        Brand = brand;
+        CategoryId = categoryId;
+        CollectionId = collectionId;
+        UpdatedAt = now;
+    }
+
+    /// <summary>Só vai para a vitrine com pelo menos um SKU (sem SKU não há preço nem estoque).</summary>
+    public bool Activate(DateTimeOffset now)
+    {
+        if (_skus.Count == 0)
+        {
+            return false;
+        }
+
+        IsActive = true;
+        UpdatedAt = now;
+        return true;
+    }
+
+    public void Deactivate(DateTimeOffset now)
+    {
+        IsActive = false;
+        UpdatedAt = now;
+    }
+
+    /// <summary>Produtos criados pelo backoffice começam inativos, até ganharem SKUs.</summary>
+    public static Product CreateDraft(string name, string slug, string description, string brand, Guid categoryId, Guid? collectionId, DateTimeOffset now)
+    {
+        var product = new Product(name, slug, description, brand, categoryId, collectionId, now) { IsActive = false };
+        return product;
+    }
 }
 
 internal sealed record ColorInfo(string Name, string Hex);
@@ -109,6 +165,26 @@ internal sealed class Sku
     public decimal Price { get; private set; }
 
     public decimal? SalePrice { get; private set; }
+
+    public void UpdatePrices(decimal price, decimal? salePrice)
+    {
+        EnsureValidPrices(price, salePrice);
+        Price = price;
+        SalePrice = salePrice;
+    }
+
+    internal static void EnsureValidPrices(decimal price, decimal? salePrice)
+    {
+        if (price <= 0)
+        {
+            throw new ArgumentException("O preço precisa ser positivo.", nameof(price));
+        }
+
+        if (salePrice is not null && (salePrice <= 0 || salePrice >= price))
+        {
+            throw new ArgumentException("O preço promocional precisa ser positivo e menor que o preço cheio.", nameof(salePrice));
+        }
+    }
 }
 
 /// <summary>Imagem de produto, agrupada por cor para a galeria da PDP.</summary>

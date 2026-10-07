@@ -164,7 +164,7 @@ internal sealed class CatalogQueries(CatalogDbContext db, IInventoryService inve
 
     private static IQueryable<Product> ApplyFilters(IQueryable<Product> products, ListProductsRequest request)
     {
-        products = products.Where(p => p.IsActive);
+        products = products.Where(p => p.IsActive && p.Skus.Any());
 
         if (!string.IsNullOrWhiteSpace(request.Category))
         {

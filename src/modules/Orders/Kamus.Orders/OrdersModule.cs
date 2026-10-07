@@ -2,6 +2,7 @@ using FluentValidation;
 using Kamus.Inventory.Contracts;
 using Kamus.Orders.Api;
 using Kamus.Orders.Application;
+using Kamus.Orders.Contracts;
 using Kamus.Orders.Persistence;
 using Kamus.Payments.Contracts;
 using Kamus.Shared.Events;
@@ -23,6 +24,8 @@ public sealed class OrdersModule : IModule
         services.AddModuleDbContext<OrdersDbContext>(OrdersDbContext.Schema);
         services.AddScoped<CheckoutService>();
         services.AddScoped<OrderQueries>();
+        services.AddScoped<OrderAdminService>();
+        services.AddScoped<IOrderReports>(sp => sp.GetRequiredService<OrderAdminService>());
         services.AddScoped<OrderEventHandlers>();
         services.AddScoped<IEventHandler<PaymentApproved>>(sp => sp.GetRequiredService<OrderEventHandlers>());
         services.AddScoped<IEventHandler<PaymentDeclined>>(sp => sp.GetRequiredService<OrderEventHandlers>());
@@ -30,5 +33,9 @@ public sealed class OrdersModule : IModule
         services.AddValidatorsFromAssemblyContaining<OrdersModule>(includeInternalTypes: true);
     }
 
-    public void MapEndpoints(IEndpointRouteBuilder endpoints) => OrdersEndpoints.Map(endpoints);
+    public void MapEndpoints(IEndpointRouteBuilder endpoints)
+    {
+        OrdersEndpoints.Map(endpoints);
+        OrdersAdminEndpoints.Map(endpoints);
+    }
 }
