@@ -164,9 +164,8 @@ internal sealed class CatalogAdminService(
         var created = new List<Sku>();
         foreach (var size in sizes)
         {
-            var code = $"{product.Slug.ToUpperInvariant()}-{Slug.From(color.Name).ToUpperInvariant()}-{size}";
             var order = Array.IndexOf(SizeOrder, size) is var index and >= 0 ? index : SizeOrder.Length;
-            created.Add(product.AddSku(code[..Math.Min(code.Length, 50)], color, size, order, request.Price, request.SalePrice));
+            created.Add(product.AddSku(SkuCode(product, color.Name, size), color, size, order, request.Price, request.SalePrice));
         }
 
         await db.SaveChangesAsync(ct);
@@ -242,6 +241,18 @@ internal sealed class CatalogAdminService(
 
         await db.SaveChangesAsync(ct);
         return await ToDetailAsync(product, ct);
+    }
+
+    /// <summary>
+    /// Código curto e legível para etiqueta e planilha: iniciais do produto + 4 caracteres do id,
+    /// cor abreviada e tamanho. Ex.: "Camisa de Linho Terracota" → <c>CDLT3F9A-AREI-M</c>.
+    /// </summary>
+    internal static string SkuCode(Product product, string color, string size)
+    {
+        var initials = string.Concat(product.Slug.Split('-', StringSplitOptions.RemoveEmptyEntries).Take(5).Select(w => w[0]));
+        var suffix = product.Id.ToString("N")[^4..];
+        var colorCode = Slug.From(color).Replace("-", string.Empty, StringComparison.Ordinal);
+        return $"{initials}{suffix}-{colorCode[..Math.Min(4, colorCode.Length)]}-{size}".ToUpperInvariant();
     }
 
     private Task<Product?> LoadAsync(Guid id, CancellationToken ct) =>

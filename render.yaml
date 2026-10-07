@@ -48,6 +48,11 @@ services:
         value: http://localhost:8080/api/payments/webhooks/fakepay
       - key: Payments__FakePay__WebhookSecret
         generateValue: true
+      # Credenciais do primeiro administrador do backoffice: preencha no painel do Render.
+      - key: Admin__Email
+        sync: false
+      - key: Admin__Password
+        sync: false
 
   - type: web
     name: kamus-web
@@ -65,3 +70,20 @@ services:
           property: hostport
       - key: ENABLE_FULFILLMENT_SIMULATION
         value: "true"
+
+  - type: web
+    name: kamus-admin
+    runtime: docker
+    plan: free
+    dockerContext: ./apps/admin
+    dockerfilePath: ./apps/admin/Dockerfile
+    envVars:
+      - key: PORT
+        value: "3001"
+      - key: API_URL
+        fromService:
+          type: web
+          name: kamus-api
+          property: hostport
+      - key: STORE_URL
+        sync: false

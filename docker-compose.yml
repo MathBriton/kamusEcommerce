@@ -38,6 +38,8 @@ services:
       Cors__Origins__0: http://localhost:3000
       Storage__LocalDisk__RootPath: /app/storage
       Payments__FakePay__WebhookUrl: http://localhost:8080/api/payments/webhooks/fakepay
+      Admin__Email: admin@kamus.dev
+      Admin__Password: admin-kamus-123
     ports:
       - "5080:8080"
     volumes:
@@ -57,6 +59,17 @@ services:
       ENABLE_FULFILLMENT_SIMULATION: "true"
     ports:
       - "3000:3000"
+    depends_on:
+      - api
+
+  admin:
+    build:
+      context: apps/admin
+    environment:
+      API_URL: http://api:8080
+      STORE_URL: http://localhost:3000
+    ports:
+      - "3001:3001"
     depends_on:
       - api
 

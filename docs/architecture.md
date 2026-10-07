@@ -25,9 +25,11 @@ flowchart TB
 ```mermaid
 flowchart TB
     cliente["👤 Cliente (navegador)"]
+    equipe["🧑‍💼 Equipe da loja"]
 
     subgraph kamus["Kamus"]
         web["Storefront<br/><small>Next.js · SSR/ISR · BFF</small>"]
+        admin["Backoffice<br/><small>Next.js · autenticado · BFF</small>"]
         api["API<br/><small>ASP.NET Core · monólito modular</small>"]
         pg[("PostgreSQL<br/><small>um schema por módulo</small>")]
         redis[("Redis<br/><small>carrinho, cache</small>")]
@@ -37,7 +39,9 @@ flowchart TB
     fakepay["💳 FakePay"]
 
     cliente -- HTTPS --> web
+    equipe -- HTTPS --> admin
     web -- "HTTP/JSON (API_URL)" --> api
+    admin -- "/api/admin/* (papel Admin)" --> api
     api --> pg
     api --> redis
     api --> files
@@ -54,7 +58,8 @@ flowchart TB
 | Cart | Carrinho de visitantes e clientes | Redis |
 | Orders | Checkout, pedidos e máquina de estados | `orders` (Postgres) |
 | Payments | Integração com o FakePay e webhooks | `payments` (Postgres) |
-| Identity | Clientes e autenticação | `identity` (Postgres) |
+| Identity | Clientes, papéis (Admin) e autenticação | `identity` (Postgres) |
+| Reporting | Relatórios do backoffice, compostos via contratos | sem tabelas (read models na R3) |
 
 Dependências entre módulos (sempre via `*.Contracts`):
 
@@ -66,6 +71,8 @@ flowchart LR
     Catalog --> Inventory
     Orders -. "eventos PaymentApproved/Declined" .-> Payments
     Orders -. "evento ReservationExpired" .-> Inventory
+    Orders --> Identity
+    Reporting --> Orders & Inventory & Catalog
 ```
 
 Setas cheias são chamadas a contratos; tracejadas são eventos in-process que o módulo da esquerda
