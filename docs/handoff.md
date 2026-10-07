@@ -29,7 +29,12 @@ Escopo em `stack.md`. Sugestão de execução:
 ## Decisões em aberto
 
 - Retenção da auditoria (sugestão: 2 anos) e do expurgo da lixeira (sugestão: 30 dias).
-- Quando publicar: Render para tudo (recomendado) ou híbrido (fronts na Vercel).
+- **Hospedagem (pausa do responsável em 2026-10-07):** ele prefere uma **VPS** para o backend, pelo
+  valor de portfólio. Sugestão apresentada: Hetzner (4 GB+ de RAM), Docker Compose com as imagens
+  publicadas no GHCR pelo CI, Caddy como proxy reverso com HTTPS automático, deploy por SSH a partir
+  do GitHub Actions, backup diário do Postgres e firewall/SSH endurecidos. Front pode ficar na mesma
+  VPS ou na Vercel. Aguardando escolha do provedor e do domínio; quando confirmado, vira escopo da R7
+  (ou uma release de deploy antes dela).
 
 ## Contexto útil
 
