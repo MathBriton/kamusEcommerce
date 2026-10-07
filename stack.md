@@ -4,7 +4,7 @@
 > Domínio inspirado em lojas de moda brasileiras; marca, identidade visual e conteúdo são próprios.
 
 **Codinome do projeto:** `Kamus`
-**Status:** R2.5 — concluída (backoffice); deploy público adiado por decisão
+**Status:** R2.5 concluída; próxima: R8 (Qualidade contínua). Deploy público adiado por decisão.
 **Última revisão:** 2026-10-06
 
 ---
@@ -67,8 +67,34 @@ Regra de dependência: um módulo expõe apenas um contrato público (interfaces
 
 ### Visão geral
 
-| Release | Nome | Escopo | MVP? |
-|---|---|---|---|
+Os números identificam cada release (e são citados nos ADRs); a coluna **Ordem** define a sequência
+de execução. Releases *planejadas* tiveram o escopo aprovado e ainda não começaram.
+
+| Ordem | Release | Nome | Escopo | Situação |
+|---|---|---|---|---|
+| 1 | R0 | Fundação | Repo, CI, ambiente local, esqueleto | ✅ concluída |
+| 2 | R1 | Vitrine | Catálogo navegável com SSR | ✅ concluída |
+| 3 | R2 | Compra | Conta, carrinho, checkout, pedido | ✅ concluída **(MVP)**; deploy público adiado |
+| 4 | R2.5 | Backoffice | Admin de catálogo, estoque e pedidos; relatórios | ✅ concluída |
+| 5 | R8 | Qualidade contínua | Testes E2E no CI, regressão visual, dependências | *planejada* · próxima |
+| 6 | R12 | Auditoria & Exclusão segura | Log de auditoria, soft delete, lixeira no backoffice | *planejada* |
+| 7 | R3 | Eventos & Busca | Outbox, mensageria, busca facetada, read models | — |
+| 8 | R6 | Operação | Observabilidade, testes de carga, resiliência | — |
+| 9 | R9 | Promoções | Cupons, regras de preço, campanhas | *planejada* |
+| 10 | R10 | Segurança & LGPD | Direitos do titular, 2FA, papéis, CSP | *planejada* |
+| 11 | R4 | Conteúdo & Mídia | CMS headless, storage S3, CDN | — |
+| 12 | R5 | Integrações | Reviews, trocas, e-mails, cashback | — |
+| 13 | R11 | Backoffice 2 | Categorias, estorno, import/export | *planejada* |
+| 14 | R7 | Cloud | IaC, ambientes, escalabilidade | — |
+
+**Por que essa ordem:** R8 é pequena e protege tudo o que vem depois; R12 vem cedo para que
+toda funcionalidade nova (cupons, categorias, estornos) já nasça auditada e com exclusão reversível;
+R3 é a base de busca,
+relatórios e integrações; R6 vem antes de novas funcionalidades para que o sistema seja medido
+antes de crescer (e é muito valorizada em vagas de backend); R9 e R10 são domínio rico e
+realidade brasileira; R4, R5 e R11 ampliam o produto; R7 fecha com a infraestrutura.
+
+---|---|---|---|
 | R0 | Fundação | Repo, CI, ambiente local, esqueleto | ✅ (concluída) |
 | R1 | Vitrine | Catálogo navegável com SSR | ✅ (concluída) |
 | R2 | Compra | Conta, carrinho, checkout, pedido | ✅ **(MVP fecha aqui)** (concluída; falta publicar) |
@@ -211,18 +237,25 @@ rastreio pelo admin e os relatórios batem com os pedidos dos testes de integra�
 - **RabbitMQ** (ou similar) com MassTransit; os módulos passam a reagir a eventos (`OrderPaid`, `ProductUpdated`, `StockChanged`)
 - **Meilisearch** como índice de busca, com facetas, typo tolerance e sinônimos, sincronizado por eventos
 - Cache de leitura do catálogo em Redis, com invalidação por evento
+- **Reporting com read models** próprios (vendas por dia, mais vendidos), atualizados por eventos (ADR 0012)
+- O reenvio de avisos de pagamento vira um **outbox de verdade** (ADR 0009)
+- Busca na vitrine (caixa de busca no cabeçalho e página de resultados)
 - ADRs: consistência eventual na busca; escolha de broker
 
 ### R4 — Conteúdo & Mídia *(futuro)*
 
 - CMS headless (Payload ou Strapi) para banners, vitrines da home e páginas de campanha
 - Storage S3-compatível (MinIO local, S3/R2 em produção) e CDN com redimensionamento de imagem
-- Revalidação on-demand no Next.js quando o conteúdo muda
+- Revalidação on-demand no Next.js quando o conteúdo muda; produtos alterados no backoffice
+  aparecem na listagem na hora, em vez de até 5 minutos (ADR 0011)
+- Upload de imagens do backoffice direto para o storage, com variações de tamanho geradas na CDN
 
 ### R5 — Integrações *(futuro)*
 
 - Serviços externos simulados consumindo eventos: avaliações pós-entrega, portal de trocas e newsletter/CRM
 - Cashback como módulo próprio (crédito gerado em `OrderDelivered`)
+- E-mails transacionais disparados por eventos (pedido confirmado, enviado, entregue), com Mailpit
+  no ambiente local
 - Webhooks de saída assinados (HMAC), com retry e dead-letter queue
 
 ### R6 — Operação *(futuro)*
@@ -231,6 +264,8 @@ rastreio pelo admin e os relatórios batem com os pedidos dos testes de integra�
 - Testes de carga com **k6** simulando pico de Black Friday, com relatório no repositório
 - Resiliência com Polly (retry, circuit breaker) nas integrações
 - Rate limiting na API
+- Medir a disputa por estoque do mesmo SKU em pico e o número de retentativas de concorrência (ADR 0008)
+- Dashboards técnicos (latência por endpoint, fila, erros) ao lado do painel de negócio do backoffice
 
 ### R7 — Cloud *(futuro)*
 
@@ -238,15 +273,84 @@ rastreio pelo admin e os relatórios batem com os pedidos dos testes de integra�
 - Ambientes de staging e produção, com preview por PR
 - Avaliar a extração do primeiro módulo para serviço, se algum ADR justificar
 
+### R8 — Qualidade contínua *(planejada · próxima)*
+
+- **Testes E2E com Playwright no CI**: fluxo de compra completo (vitrine → pagamento) e fluxo do
+  backoffice (criar, publicar, despachar)
+- **Regressão visual**: o mesmo roteiro gera as imagens de `apps/web/design` e `apps/admin/design`
+  e falha o CI se uma tela mudar sem querer (as imagens do design system passam a se atualizar sozinhas)
+- Dependabot e CodeQL; pacote compartilhado de tokens de design (`packages/ui`) entre loja e admin
+- Codespaces/devcontainer para rodar tudo no navegador, sem Docker local
+
+### R9 — Promoções *(planejada)*
+
+- Cupons (percentual, valor fixo, frete grátis) com validade, valor mínimo e limite de usos
+- Regras de preço por coleção ou categoria ("20% na coleção Outlet")
+- Preço final calculado no checkout com explicação dos descontos aplicados; snapshot no pedido
+- Desafio de system design: **cupom com limite de usos sob concorrência** (mesmo problema do último
+  item em estoque, agora com contador)
+- Gestão de cupons no backoffice e impacto das promoções nos relatórios
+
+### R10 — Segurança & LGPD *(planejada)*
+
+- Direitos do titular: exportar meus dados, excluir conta por **anonimização** (não soft delete:
+  manter dados pessoais "escondidos" não atende o direito de eliminação), registro de consentimento
+- 2FA para administradores e papéis granulares (atendimento, estoque, financeiro), aproveitando a
+  auditoria da R12 para registrar acessos sensíveis
+- Cabeçalhos de segurança e Content Security Policy na loja e no admin; revisão OWASP Top 10
+
+### R12 — Auditoria & Exclusão segura *(planejada)*
+
+**Objetivo:** saber sempre quem fez o quê, quando e qual era o valor anterior, e nunca perder um
+dado por um clique errado no backoffice.
+
+**Log de auditoria**
+- Cada alteração feita por um usuário (criar, editar, publicar, ajustar estoque, despachar,
+  cancelar, excluir, restaurar) gera um registro: **quem** (id e e-mail), **o quê** (módulo,
+  entidade, id, ação), **quando**, **antes → depois** (somente os campos alterados) e contexto da
+  requisição (IP, correlation id)
+- Captura automática por **interceptor do EF Core** em cada módulo; os registros vão para o módulo
+  **Audit** (schema próprio) pelo contrato `IAuditLog`, respeitando as fronteiras
+- **Somente inclusão (append-only)**: o usuário do banco da aplicação não tem permissão de
+  `UPDATE`/`DELETE` na tabela de auditoria
+- Backoffice: tela **Atividade** (filtros por usuário, módulo, período) e aba **Histórico** no
+  produto e no pedido
+- Política de retenção configurável (ex.: 2 anos) e exportação em CSV
+
+**Soft delete (exclusão reversível)**
+- Entidades excluíveis ganham `DeletedAt` e `DeletedBy`; **filtro global** do EF Core esconde os
+  excluídos de toda consulta; o interceptor transforma `Remove()` em marcação
+- Aplica-se a produtos, SKUs, imagens e, na R11, categorias, coleções e cupons
+- **Índices únicos parciais** (`WHERE deleted_at IS NULL`): o slug de um produto excluído pode ser
+  reutilizado
+- Backoffice: **Lixeira** com restaurar e excluir definitivamente (só para quem tiver permissão),
+  e expurgo automático após N dias
+- Pedidos **não** são excluídos (só cancelados) e dados pessoais seguem a regra de anonimização da R10
+
+**ADRs**
+- Auditoria por interceptor + módulo Audit (vs. triggers no banco vs. event sourcing)
+- Soft delete com filtro global e índices parciais; o que nunca é excluído
+
+**Pronto quando:** toda ação do backoffice aparece na tela Atividade com o valor anterior; um
+produto excluído some da loja e do admin, aparece na Lixeira e volta intacto ao ser restaurado.
+
+### R11 — Backoffice 2 *(planejada)*
+
+- Gestão de categorias e coleções; reordenação de imagens
+- Estorno de pagamento pelo admin (novo evento do FakePay: `charge.refunded`)
+- Importação de produtos por CSV e exportação de pedidos e relatórios
+- Responsivo para uso no celular (consulta rápida de pedidos)
+
 ---
 
 ## 4. Backlog de ideias (sem release definida)
 
 - Lista de desejos
-- Cupons e regras de promoção
 - Recomendação "quem viu também viu"
 - Multi-idioma e multi-moeda
 - PWA
+- Recomendações por IA (descrição de produto gerada no backoffice, busca semântica)
+- Programa de fidelidade além do cashback
 
 ---
 
@@ -259,3 +363,5 @@ rastreio pelo admin e os relatórios batem com os pedidos dos testes de integra�
 | 2026-10-06 | R1 | Vitrine entregue: catálogo com 100 produtos, PLP (ISR + filtros), PDP (SSR), sitemap; Lighthouse SEO 100 na PDP; ADRs 0004–0006 |
 | 2026-10-06 | R2 | Compra entregue: Identity, carrinho em Redis, checkout, reserva de estoque, FakePay com webhooks idempotentes, pedidos; ADRs 0007–0010; blueprint de deploy no Render |
 | 2026-10-07 | R2.5 | Backoffice entregue: papel Admin, app `apps/admin`, CRUD de catálogo com upload, estoque, operação de pedidos e módulo Reporting; ADRs 0011–0012 |
+| 2026-10-07 | — | Roteiro reordenado (R3 → R6 antes de R4/R5); pendências dos ADRs incorporadas; propostas R8–R11 |
+| 2026-10-07 | — | Propostas R8–R11 aprovadas; nova R12 (Auditoria & Exclusão segura), logo após a R8 |
