@@ -16,6 +16,10 @@ const shot = async (file: string, fullPage = false) => {
   });
 };
 
+/** Link do menu lateral (outras partes da tela também têm links como "Ver na Atividade"). */
+const menu = (name: string | RegExp) =>
+  page.getByRole("navigation", { name: "Menu" }).getByRole("link", { name });
+
 test.beforeAll(async ({ browser }) => {
   // browser.newPage não herda o `use` do projeto: idioma e fuso precisam vir explícitos
   // (campos de data em dd/mm/aaaa, horas no fuso da loja).
@@ -137,7 +141,7 @@ test("despacha o pedido com rastreio", async () => {
 });
 
 test("atividade mostra quem fez o quê, com o valor anterior", async () => {
-  await page.getByRole("link", { name: "Atividade" }).click();
+  await menu("Atividade").click();
   await expect(page.getByRole("heading", { name: "Atividade" })).toBeVisible();
 
   // Só as ações do administrador: as da compra dependem do momento em que cada aviso de
@@ -156,7 +160,7 @@ test("atividade mostra quem fez o quê, com o valor anterior", async () => {
 });
 
 test("histórico do produto lista cada alteração", async () => {
-  await page.getByRole("link", { name: "Produtos" }).click();
+  await menu("Produtos").click();
   await page.getByRole("link", { name: "Camisa de Linho Areia" }).first().click();
   await expect(page.getByRole("heading", { name: "Camisa de Linho Areia" })).toBeVisible();
   await page.getByRole("link", { name: /^Histórico/ }).click();
@@ -174,7 +178,7 @@ test("exclui uma variação e um produto, com confirmação", async () => {
   await expect(page.getByRole("row", { name: /Areia · GG / })).toHaveCount(0);
 
   // produto: o Boné Trucker some da loja
-  await page.getByRole("link", { name: "Produtos" }).click();
+  await menu("Produtos").click();
   await expect(page.getByRole("heading", { name: "Produtos" })).toBeVisible();
   await page.getByRole("button", { name: "Excluir Boné Trucker" }).click();
   const dialog = page.getByRole("dialog");
@@ -190,7 +194,7 @@ test("exclui uma variação e um produto, com confirmação", async () => {
 });
 
 test("lixeira restaura o produto como estava", async () => {
-  await page.getByRole("link", { name: /^Lixeira/ }).click();
+  await menu(/^Lixeira/).click();
   await expect(page.getByRole("heading", { name: "Lixeira" })).toBeVisible();
   await expect(page.getByRole("button", { name: "Restaurar Boné Trucker" })).toBeVisible();
   await expect(
