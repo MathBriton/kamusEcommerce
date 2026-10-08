@@ -89,21 +89,9 @@ de execução. Releases *planejadas* tiveram o escopo aprovado e ainda não come
 
 **Por que essa ordem:** R8 é pequena e protege tudo o que vem depois; R12 vem cedo para que
 toda funcionalidade nova (cupons, categorias, estornos) já nasça auditada e com exclusão reversível;
-R3 é a base de busca,
-relatórios e integrações; R6 vem antes de novas funcionalidades para que o sistema seja medido
+R3 é a base de busca, relatórios e integrações; R6 vem antes de novas funcionalidades para que o sistema seja medido
 antes de crescer (e é muito valorizada em vagas de backend); R9 e R10 são domínio rico e
 realidade brasileira; R4, R5 e R11 ampliam o produto; R7 fecha com a infraestrutura.
-
----|---|---|---|
-| R0 | Fundação | Repo, CI, ambiente local, esqueleto | ✅ (concluída) |
-| R1 | Vitrine | Catálogo navegável com SSR | ✅ (concluída) |
-| R2 | Compra | Conta, carrinho, checkout, pedido | ✅ **(MVP fecha aqui)** (concluída; falta publicar) |
-| R2.5 | Backoffice | Admin de catálogo, estoque e pedidos; relatórios | ✅ (concluída) |
-| R3 | Eventos & Busca | Outbox, mensageria, busca facetada | — |
-| R4 | Conteúdo & Mídia | CMS headless, storage S3, CDN | — |
-| R5 | Integrações | Reviews, trocas, newsletter, cashback | — |
-| R6 | Operação | Observabilidade, testes de carga, resiliência | — |
-| R7 | Cloud | IaC, ambientes, escalabilidade | — |
 
 ---
 
