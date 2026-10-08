@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import Image from "next/image";
 import Link from "next/link";
 import { notFound } from "next/navigation";
+import { ActorBadge } from "@/components/audit/badges";
 import { OrderActions } from "@/components/orders/OrderActions";
 import { Card, PageHeader, StatusBadge } from "@/components/ui";
 import { formatDateTime, formatPrice } from "@/lib/format";
@@ -84,7 +85,17 @@ export default async function OrderPage(props: PageProps<"/pedidos/[id]">) {
             </dl>
           </Card>
 
-          <Card title="Histórico">
+          <Card
+            title="Histórico"
+            actions={
+              <Link
+                href="/atividade?modulo=orders"
+                className="text-xs text-accent underline-offset-4 hover:underline"
+              >
+                Ver na Atividade →
+              </Link>
+            }
+          >
             <ol className="space-y-3 border-l border-line pl-4 text-sm">
               {order.history.map((h, i) => (
                 <li key={i}>
@@ -93,6 +104,13 @@ export default async function OrderPage(props: PageProps<"/pedidos/[id]">) {
                     {formatDateTime(h.at)}
                     {h.note ? ` · ${h.note}` : ""}
                   </p>
+                  {/* Quem fez a mudança (R12); históricos anteriores à auditoria não têm ator. */}
+                  {(h.actorKind || h.actorName) && (
+                    <p className="mt-1 flex flex-wrap items-center gap-2 text-[13px]">
+                      {h.actorKind && <ActorBadge kind={h.actorKind} />}
+                      {h.actorName && <span>{h.actorName}</span>}
+                    </p>
+                  )}
                 </li>
               ))}
             </ol>
