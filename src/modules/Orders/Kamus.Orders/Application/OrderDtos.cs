@@ -45,7 +45,11 @@ public sealed record OrderItemDto(
     int Quantity,
     decimal LineTotal);
 
-public sealed record OrderStatusChangeDto(string Status, DateTimeOffset At, string? Note);
+/// <summary>
+/// Uma mudança de situação. <c>ActorKind</c> ("Admin", "Customer" ou "System") e <c>ActorName</c> dizem
+/// quem a fez: preenchidos só no backoffice e nulos em pedidos anteriores à auditoria.
+/// </summary>
+public sealed record OrderStatusChangeDto(string Status, DateTimeOffset At, string? Note, string? ActorKind = null, string? ActorName = null);
 
 public sealed record OrderSummaryDto(Guid Id, string Number, string Status, decimal Total, int ItemCount, string? ImageUrl, DateTimeOffset CreatedAt);
 

@@ -21,7 +21,7 @@ public sealed class OrdersModule : IModule
     public void Register(IServiceCollection services, IConfiguration configuration)
     {
         services.Configure<OrdersOptions>(configuration.GetSection(OrdersOptions.SectionName));
-        services.AddModuleDbContext<OrdersDbContext>(OrdersDbContext.Schema);
+        services.AddModuleDbContext<OrdersDbContext>(OrdersDbContext.Schema, OrdersAudit.Configure);
         services.AddScoped<CheckoutService>();
         services.AddScoped<OrderQueries>();
         services.AddScoped<OrderAdminService>();

@@ -1,10 +1,15 @@
 using Kamus.Orders.Domain;
+using Kamus.Shared.Auditing;
 
 namespace Kamus.UnitTests;
 
 public sealed class OrderTests
 {
     private static readonly DateTimeOffset Now = new(2026, 10, 6, 12, 0, 0, TimeSpan.Zero);
+
+    private static readonly AuditActor Customer = new(AuditActorKind.Customer, Guid.NewGuid(), "Maria Silva", "maria@kamus.test");
+
+    private static readonly AuditActor FakePay = AuditActor.System("FakePay");
 
     [Theory]
     [InlineData(OrderStatus.Created, OrderStatus.AwaitingPayment, true)]
@@ -36,9 +41,9 @@ public sealed class OrderTests
         order.Total.Should().Be(order.Subtotal + 19.90m);
         order.Status.Should().Be(OrderStatus.Created);
 
-        order.StartPayment(Now).IsSuccess.Should().BeTrue();
+        order.StartPayment(Now, Customer).IsSuccess.Should().BeTrue();
         var paymentId = Guid.NewGuid();
-        order.MarkPaid(paymentId, Now.AddMinutes(1)).IsSuccess.Should().BeTrue();
+        order.MarkPaid(paymentId, Now.AddMinutes(1), FakePay).IsSuccess.Should().BeTrue();
 
         order.PaymentId.Should().Be(paymentId);
         order.History.Select(h => h.Status).Should().Equal(OrderStatus.Created, OrderStatus.AwaitingPayment, OrderStatus.Paid);
@@ -48,10 +53,10 @@ public sealed class OrderTests
     public void Pagamento_confirmado_duas_vezes_nao_duplica_historico()
     {
         var order = NewOrder();
-        order.StartPayment(Now);
-        order.MarkPaid(Guid.NewGuid(), Now);
+        order.StartPayment(Now, Customer);
+        order.MarkPaid(Guid.NewGuid(), Now, FakePay);
 
-        var second = order.MarkPaid(Guid.NewGuid(), Now);
+        var second = order.MarkPaid(Guid.NewGuid(), Now, FakePay);
 
         second.IsFailure.Should().BeTrue();
         second.Error!.Code.Should().Be("orders.invalid_transition");
@@ -61,7 +66,7 @@ public sealed class OrderTests
     [Fact]
     public void Pedido_sem_itens_e_invalido()
     {
-        var act = () => Order.Create(Guid.NewGuid(), [], Address, new ShippingInfo("Sudeste", 0, 3), Now);
+        var act = () => Order.Create(Guid.NewGuid(), [], Address, new ShippingInfo("Sudeste", 0, 3), Now, Customer);
 
         act.Should().Throw<ArgumentException>();
     }
@@ -76,5 +81,6 @@ public sealed class OrderTests
         ],
         Address,
         new ShippingInfo("Sudeste", 19.90m, 3),
-        Now);
+        Now,
+        Customer);
 }

@@ -1,12 +1,13 @@
 using Kamus.Inventory.Contracts;
 using Kamus.Orders.Domain;
 using Kamus.Orders.Persistence;
+using Kamus.Shared.Auditing;
 using Kamus.Shared.Results;
 using Microsoft.EntityFrameworkCore;
 
 namespace Kamus.Orders.Application;
 
-internal sealed class OrderQueries(OrdersDbContext db, IInventoryService inventory, TimeProvider clock)
+internal sealed class OrderQueries(OrdersDbContext db, IInventoryService inventory, ICurrentActor currentActor, TimeProvider clock)
 {
     public async Task<IReadOnlyList<OrderSummaryDto>> ListAsync(Guid customerId, CancellationToken ct)
     {
@@ -34,7 +35,9 @@ internal sealed class OrderQueries(OrdersDbContext db, IInventoryService invento
             return NotFound();
         }
 
-        var result = order.Cancel("Cancelado pelo cliente.", clock.GetUtcNow());
+        var customer = currentActor.Customer();
+        using var actingAsCustomer = currentActor.ActAs(customer);
+        var result = order.Cancel("Cancelado pelo cliente.", clock.GetUtcNow(), customer);
         if (result.IsFailure)
         {
             return Error.Conflict("orders.cannot_cancel", "Este pedido não pode mais ser cancelado.");
@@ -54,10 +57,13 @@ internal sealed class OrderQueries(OrdersDbContext db, IInventoryService invento
             return NotFound();
         }
 
+        // Não é o cliente que despacha: a simulação faz o papel da operação logística.
+        var actor = OrderActors.FulfillmentSimulation;
+        using var actingAsLogistics = currentActor.ActAs(actor);
         var result = order.Status switch
         {
-            OrderStatus.Paid => order.Ship(clock.GetUtcNow()),
-            OrderStatus.Shipped => order.Deliver(clock.GetUtcNow()),
+            OrderStatus.Paid => order.Ship(clock.GetUtcNow(), actor),
+            OrderStatus.Shipped => order.Deliver(clock.GetUtcNow(), actor),
             _ => Error.Conflict("orders.invalid_transition", "Só pedidos pagos ou enviados avançam na entrega."),
         };
 
@@ -74,7 +80,11 @@ internal sealed class OrderQueries(OrdersDbContext db, IInventoryService invento
 
     private static Error NotFound() => Error.NotFound("orders.not_found", "Pedido não encontrado.");
 
-    internal static OrderDetailDto ToDetail(Order o) => new(
+    /// <summary>
+    /// Detalhe do pedido. Quem fez cada mudança (<paramref name="includeActors"/>) só vai para o
+    /// backoffice: o cliente não precisa ver o nome de quem opera a loja.
+    /// </summary>
+    internal static OrderDetailDto ToDetail(Order o, bool includeActors = false) => new(
         o.Id,
         o.DisplayNumber,
         o.Status.ToString(),
@@ -84,7 +94,9 @@ internal sealed class OrderQueries(OrdersDbContext db, IInventoryService invento
         o.Subtotal,
         o.Total,
         o.CreatedAt,
-        [.. o.History.Select(h => new OrderStatusChangeDto(h.Status.ToString(), h.At, h.Note))],
+        [.. o.History.Select(h => includeActors
+            ? new OrderStatusChangeDto(h.Status.ToString(), h.At, h.Note, h.ActorKind, h.ActorName)
+            : new OrderStatusChangeDto(h.Status.ToString(), h.At, h.Note))],
         OrderStateMachine.CanTransition(o.Status, OrderStatus.Cancelled),
         o.TrackingCode);
 }

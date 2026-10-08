@@ -2,6 +2,7 @@ using Kamus.Inventory.Contracts;
 using Kamus.Orders.Domain;
 using Kamus.Orders.Persistence;
 using Kamus.Payments.Contracts;
+using Kamus.Shared.Auditing;
 using Kamus.Shared.Events;
 using Kamus.Shared.Infrastructure;
 using Microsoft.EntityFrameworkCore;
@@ -12,10 +13,12 @@ namespace Kamus.Orders.Application;
 /// <summary>
 /// Reage aos eventos de pagamento e estoque. Todos os handlers são idempotentes: o mesmo evento
 /// entregue duas vezes não muda o pedido duas vezes (a máquina de estados barra a repetição).
+/// O ator vem de quem publicou o evento (ex.: "FakePay", "Expiração da reserva").
 /// </summary>
 internal sealed class OrderEventHandlers(
     OrdersDbContext db,
     IInventoryService inventory,
+    ICurrentActor currentActor,
     TimeProvider clock,
     ILogger<OrderEventHandlers> logger)
     : IEventHandler<PaymentApproved>, IEventHandler<PaymentDeclined>, IEventHandler<ReservationExpired>
@@ -39,11 +42,11 @@ internal sealed class OrderEventHandlers(
             // sido vendido para outra pessoa: o pedido é cancelado (e o pagamento, estornado).
             if (await inventory.CommitReservationAsync(order.Id, ct))
             {
-                order.MarkPaid(@event.PaymentId, clock.GetUtcNow());
+                order.MarkPaid(@event.PaymentId, clock.GetUtcNow(), currentActor.Actor);
             }
             else
             {
-                order.Cancel("Pagamento aprovado após o prazo da reserva; valor será estornado.", clock.GetUtcNow());
+                order.Cancel("Pagamento aprovado após o prazo da reserva; valor será estornado.", clock.GetUtcNow(), currentActor.Actor);
             }
 
             await db.SaveChangesAsync(ct);
@@ -61,7 +64,7 @@ internal sealed class OrderEventHandlers(
             }
 
             await inventory.ReleaseReservationAsync(order.Id, ct);
-            order.MarkPaymentFailed(@event.PaymentId, @event.Reason, clock.GetUtcNow());
+            order.MarkPaymentFailed(@event.PaymentId, @event.Reason, clock.GetUtcNow(), currentActor.Actor);
             await db.SaveChangesAsync(ct);
             return true;
         });
@@ -75,7 +78,7 @@ internal sealed class OrderEventHandlers(
                 return false;
             }
 
-            order.Cancel("Tempo para pagamento esgotado.", clock.GetUtcNow());
+            order.Cancel("Tempo para pagamento esgotado.", clock.GetUtcNow(), currentActor.Actor);
             await db.SaveChangesAsync(ct);
             return true;
         });
