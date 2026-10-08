@@ -5,6 +5,7 @@
     <ProjectReference Include="../../src/modules/Payments/Kamus.Payments/Kamus.Payments.csproj" />
     <ProjectReference Include="../../src/shared/Kamus.Shared/Kamus.Shared.csproj" />
     <ProjectReference Include="../../src/modules/Reporting/Kamus.Reporting/Kamus.Reporting.csproj" />
+    <ProjectReference Include="../../src/modules/Audit/Kamus.Audit/Kamus.Audit.csproj" />
   </ItemGroup>
 
 </Project>
