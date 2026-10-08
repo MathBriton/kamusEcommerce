@@ -25,7 +25,8 @@ internal sealed class CatalogSeeder(
 
     public async Task SeedAsync(CancellationToken cancellationToken)
     {
-        if (await db.Products.AnyAsync(cancellationToken))
+        // Conta também o que está na lixeira: um catálogo com tudo excluído não é um catálogo vazio.
+        if (await db.Products.IgnoreQueryFilters().AnyAsync(cancellationToken))
         {
             await RestoreMissingImagesAsync(cancellationToken);
             return;
@@ -101,12 +102,13 @@ internal sealed class CatalogSeeder(
 
     /// <summary>
     /// Em hospedagens com disco efêmero (ex.: containers sem volume), os arquivos somem a cada deploy
-    /// mas o banco continua populado. Regera as ilustrações que faltarem. (Na R4 as imagens vão para S3.)
+    /// mas o banco continua populado. Regera as ilustrações que faltarem, inclusive as de itens na
+    /// lixeira (que podem ser restaurados). (Na R4 as imagens vão para S3.)
     /// </summary>
     private async Task RestoreMissingImagesAsync(CancellationToken ct)
     {
         var templates = SeedCatalog.Templates.ToDictionary(t => t.CategoryPath);
-        var images = await db.Products.AsNoTracking()
+        var images = await db.Products.IgnoreQueryFilters().AsNoTracking()
             .SelectMany(p => p.Images.Select(i => new
             {
                 i.StorageKey,

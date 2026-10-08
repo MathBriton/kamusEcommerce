@@ -3,7 +3,10 @@ namespace Kamus.Catalog.Contracts;
 /// <summary>Contrato público do módulo Catalog para outros módulos (Cart, Orders).</summary>
 public interface ICatalogService
 {
-    /// <summary>Dados atuais dos SKUs informados. SKUs inexistentes ou inativos não aparecem no resultado.</summary>
+    /// <summary>
+    /// Dados atuais dos SKUs vendáveis entre os informados. SKUs inexistentes, de produtos não
+    /// publicados ou na lixeira (SKU ou produto excluído) não aparecem no resultado.
+    /// </summary>
     Task<IReadOnlyDictionary<Guid, SkuSnapshot>> GetSkusAsync(IReadOnlyCollection<Guid> skuIds, CancellationToken cancellationToken = default);
 
     /// <summary>

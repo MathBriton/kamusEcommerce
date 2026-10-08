@@ -18,10 +18,20 @@ public sealed class CatalogModule : IModule
 
     public void Register(IServiceCollection services, IConfiguration configuration)
     {
-        services.AddModuleDbContext<CatalogDbContext>(CatalogDbContext.Schema);
+        services.AddOptions<CatalogOptions>()
+            .Bind(configuration.GetSection(CatalogOptions.SectionName))
+            .Validate(o => o.TrashRetentionDays >= 1, "Catalog:TrashRetentionDays deve ser de pelo menos 1 dia.")
+            .Validate(o => o.TrashPurgeInterval > TimeSpan.Zero, "Catalog:TrashPurgeInterval deve ser positivo.")
+            .ValidateOnStart();
+
+        // Soft delete (lixeira) e auditoria: ver CatalogAuditPolicy e ADRs 0014/0015.
+        services.AddModuleDbContext<CatalogDbContext>(CatalogDbContext.Schema, CatalogAuditPolicy.Configure);
         services.AddScoped<CatalogQueries>();
         services.AddScoped<ICatalogService, CatalogService>();
         services.AddScoped<CatalogAdminService>();
+        services.AddScoped<CatalogTrashService>();
+        services.AddSingleton<TrashPurgeWorker>();
+        services.AddHostedService(sp => sp.GetRequiredService<TrashPurgeWorker>());
         services.AddScoped<IDataSeeder, CatalogSeeder>();
         services.AddValidatorsFromAssemblyContaining<CatalogModule>(includeInternalTypes: true);
     }

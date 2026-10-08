@@ -60,7 +60,24 @@ internal static class CatalogAdminEndpoints
             .DisableAntiforgery()
             .WithMetadata(new Microsoft.AspNetCore.Mvc.RequestSizeLimitAttribute(CatalogAdminService.MaxImageBytes + 64 * 1024));
 
+        // Exclusões vão para a lixeira (soft delete); só o expurgo apaga de vez.
         group.MapDelete("/products/{id:guid}/images/{imageId:guid}", async (Guid id, Guid imageId, CatalogAdminService admin, CancellationToken ct) =>
             (await admin.RemoveImageAsync(id, imageId, ct)).ToHttp());
+
+        group.MapDelete("/products/{id:guid}", async (Guid id, CatalogAdminService admin, CancellationToken ct) =>
+            (await admin.DeleteProductAsync(id, ct)).ToHttp());
+
+        group.MapDelete("/skus/{skuId:guid}", async (Guid skuId, CatalogAdminService admin, CancellationToken ct) =>
+            (await admin.DeleteSkuAsync(skuId, ct)).ToHttp());
+
+        // Lixeira: type = product | sku | image.
+        group.MapGet("/trash", async (string? type, int? page, int? pageSize, CatalogTrashService trash, CancellationToken ct) =>
+            (await trash.ListAsync(type, Math.Max(1, page ?? 1), Math.Clamp(pageSize ?? 50, 1, 100), ct)).ToHttp());
+
+        group.MapPost("/trash/{type}/{id:guid}/restore", async (string type, Guid id, CatalogTrashService trash, CancellationToken ct) =>
+            (await trash.RestoreAsync(type, id, ct)).ToHttp());
+
+        group.MapDelete("/trash/{type}/{id:guid}", async (string type, Guid id, CatalogTrashService trash, CancellationToken ct) =>
+            (await trash.PurgeAsync(type, id, ct)).ToHttp());
     }
 }
