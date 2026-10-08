@@ -4,7 +4,7 @@
 > é um bilhete para quem continua, não um histórico completo (o histórico está no `git log` e no
 > `stack.md`).
 
-**Última atualização:** 2026-10-07 · Claude Code
+**Última atualização:** 2026-10-08 · Claude Code
 
 ## Onde estamos
 
@@ -13,22 +13,40 @@
   visual**; CodeQL e Dependabot ativos.
 - Deploy público **adiado por decisão do responsável** (`render.yaml` e `docs/deploy.md` prontos).
 
-## Próximo passo: R12 — Auditoria & Exclusão segura
+## Em andamento: R12 — Auditoria & Exclusão segura (branch `claude/festive-pasteur-l8jhiz`)
 
-Escopo em `stack.md`. Sugestão de execução:
+Telas aprovadas pelo responsável num canvas (Atividade, Lixeira, aba Histórico do produto, ator no
+histórico do pedido, diálogo de exclusão). Decisões: retenção da auditoria 2 anos (mín. 365 dias),
+expurgo da lixeira 30 dias, ações automáticas como ator "Sistema" (ex.: FakePay), excluir produto
+leva SKUs e imagens junto, "Excluir de vez" para Admin, pedidos nunca são excluídos.
 
-1. ADR: auditoria por interceptor do EF Core + módulo **Audit** (schema próprio, contrato
-   `IAuditLog`, tabela append-only) vs. triggers no banco. Recomendado: interceptor.
-2. Interceptor compartilhado em `Kamus.Shared` que captura quem/o quê/quando/antes→depois a partir do
-   `HttpContext` (usuário) e do ChangeTracker; cada módulo o registra no próprio DbContext.
-3. Soft delete: `DeletedAt`/`DeletedBy`, filtro global (`HasQueryFilter`), índices únicos parciais
-   (`WHERE deleted_at IS NULL`) — começando por produtos, SKUs e imagens.
-4. Backoffice: tela **Atividade**, aba **Histórico** em produto e pedido, **Lixeira** (restaurar).
-5. Testes de integração + cenários E2E novos (com capturas em `apps/admin/design`).
+**Já na branch:**
+- ADRs [0014](adr/0014-auditoria-por-interceptor-e-modulo-audit.md) e
+  [0015](adr/0015-exclusao-reversivel-com-lixeira.md); `docs/architecture.md`, `AGENTS.md`, README.
+- Shared (`Kamus.Shared.Auditing`): `ICurrentActor`, `AuditPolicyBuilder` (allowlist por módulo),
+  `SoftDeleteInterceptor`, `AuditingInterceptor` (grava na mesma transação), `IFileStorage.DeleteAsync`;
+  claim `kamus:full_name` no Identity.
+- Módulo **Audit** (schema `audit`, triggers de somente inclusão, retenção, endpoints
+  `/api/admin/audit/*` com CSV), registrado no host; testes unitários, de arquitetura e integração.
+- Contrato do Catalog: `DescribeSkusAsync`, `SkuDescription`, evento `SkusPurged`.
+- Backoffice completo contra o contrato (Atividade, Lixeira, Histórico, exclusões, ator no pedido).
+- E2E novos em `e2e/tests/backoffice.spec.ts` (capturas 07 a 10 ainda **não geradas**).
+
+**Pela metade (worktrees locais, branches `r12-catalog` e `r12-orders`, ainda não mergeadas):**
+- Catalog: soft delete em produto/SKU/imagem, filtros e índices parciais, política de auditoria,
+  endpoints de exclusão, lixeira, restauração, expurgo e `TrashPurgeWorker`.
+- Orders/Inventory/Payments/Reporting: ator no histórico do pedido (migration), políticas de
+  auditoria de pedido e estoque, `ActAs(System("FakePay"))`, handler de `SkusPurged`.
+- Se essas worktrees se perderem (o container é efêmero), refazer a partir do escopo da R12 no
+  `stack.md`, dos ADRs 0014/0015 e da API já pronta no Shared e no front (o front mostra o contrato
+  JSON esperado em `apps/admin/src/lib/schemas.ts`).
+
+**Falta depois do merge:** checagens completas, `./e2e/run.sh --update` (todas as capturas do admin
+mudam: menu ganhou a seção Controle), revisão das imagens, revisão de código, `stack.md` (R12 ✅) e
+este handoff.
 
 ## Decisões em aberto
 
-- Retenção da auditoria (sugestão: 2 anos) e do expurgo da lixeira (sugestão: 30 dias).
 - **Hospedagem (pausa do responsável em 2026-10-07):** ele prefere uma **VPS** para o backend, pelo
   valor de portfólio. Sugestão apresentada: Hetzner (4 GB+ de RAM), Docker Compose com as imagens
   publicadas no GHCR pelo CI, Caddy como proxy reverso com HTTPS automático, deploy por SSH a partir
