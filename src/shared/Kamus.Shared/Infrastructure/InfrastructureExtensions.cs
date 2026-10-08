@@ -1,3 +1,4 @@
+using Kamus.Shared.Auditing;
 using Kamus.Shared.Events;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
@@ -35,6 +36,7 @@ public static class InfrastructureExtensions
 
         services.AddInProcessEvents();
         services.AddHttpContextAccessor();
+        services.AddCurrentActor();
 
         return services;
     }

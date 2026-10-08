@@ -22,6 +22,7 @@
     <ProjectReference Include="../../src/modules/Payments/Kamus.Payments/Kamus.Payments.csproj" />
     <ProjectReference Include="../../src/modules/Identity/Kamus.Identity/Kamus.Identity.csproj" />
     <ProjectReference Include="../../src/modules/Reporting/Kamus.Reporting/Kamus.Reporting.csproj" />
+    <ProjectReference Include="../../src/modules/Audit/Kamus.Audit/Kamus.Audit.csproj" />
   </ItemGroup>
 
 </Project>

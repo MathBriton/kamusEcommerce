@@ -8,9 +8,14 @@ namespace Kamus.ArchitectureTests;
 /// </summary>
 public sealed class ModuleBoundaryTests
 {
-    private static readonly string[] Modules = ["Catalog", "Inventory", "Cart", "Orders", "Payments", "Identity", "Reporting"];
+    private static readonly string[] Modules = ["Catalog", "Inventory", "Cart", "Orders", "Payments", "Identity", "Reporting", "Audit"];
+
+    /// <summary>Módulos sem projeto <c>.Contracts</c>: o contrato do Audit (<c>IAuditLog</c>) é building block do Shared.</summary>
+    private static readonly string[] ModulesWithoutContracts = ["Audit"];
 
     public static TheoryData<string> ModuleNames => new(Modules);
+
+    public static TheoryData<string> ModulesWithContracts => new(Modules.Except(ModulesWithoutContracts));
 
     [Theory]
     [MemberData(nameof(ModuleNames))]
@@ -30,7 +35,7 @@ public sealed class ModuleBoundaryTests
     }
 
     [Theory]
-    [MemberData(nameof(ModuleNames))]
+    [MemberData(nameof(ModulesWithContracts))]
     public void Contratos_nao_dependem_de_implementacoes(string module)
     {
         var assembly = Assembly.Load($"Kamus.{module}.Contracts");

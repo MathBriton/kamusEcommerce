@@ -45,6 +45,18 @@ public sealed class LocalDiskFileStorage(IOptions<LocalDiskStorageOptions> optio
     public Task<bool> ExistsAsync(string key, CancellationToken cancellationToken = default) =>
         Task.FromResult(File.Exists(Resolve(key)));
 
+    public Task DeleteAsync(string key, CancellationToken cancellationToken = default)
+    {
+        // Idempotente: arquivo (ou pasta) inexistente não é erro.
+        var path = Resolve(key);
+        if (File.Exists(path))
+        {
+            File.Delete(path);
+        }
+
+        return Task.CompletedTask;
+    }
+
     public string GetPublicUrl(string key) => $"{_prefix}/{key}";
 
     /// <summary>Resolve a chave dentro da raiz, bloqueando path traversal (ex.: "../../etc/passwd").</summary>

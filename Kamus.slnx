@@ -5,6 +5,9 @@
   </Folder>
   <Folder Name="/src/" />
   <Folder Name="/src/modules/" />
+  <Folder Name="/src/modules/Audit/">
+    <Project Path="src/modules/Audit/Kamus.Audit/Kamus.Audit.csproj" />
+  </Folder>
   <Folder Name="/src/modules/Cart/">
     <Project Path="src/modules/Cart/Kamus.Cart.Contracts/Kamus.Cart.Contracts.csproj" />
     <Project Path="src/modules/Cart/Kamus.Cart/Kamus.Cart.csproj" />

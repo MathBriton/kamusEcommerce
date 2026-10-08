@@ -12,6 +12,9 @@ public interface IFileStorage
 
     Task<bool> ExistsAsync(string key, CancellationToken cancellationToken = default);
 
+    /// <summary>Apaga o arquivo. Idempotente: chave inexistente não é erro.</summary>
+    Task DeleteAsync(string key, CancellationToken cancellationToken = default);
+
     /// <summary>URL pública (relativa ao host da API) para servir o arquivo.</summary>
     string GetPublicUrl(string key);
 }
