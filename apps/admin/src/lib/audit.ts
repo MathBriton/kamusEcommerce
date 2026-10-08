@@ -192,3 +192,7 @@ export const changeValue = (value: string | null) => (value === null || value ==
 /** Campos cujo valor muda a cada execução (o código do SKU leva parte do id do produto). */
 const VOLATILE_FIELDS = new Set(["Código"]);
 export const isVolatileField = (field: string) => VOLATILE_FIELDS.has(field);
+
+/** Só valores que existem mudam entre execuções: o "—" de um campo vazio fica visível na captura. */
+export const isVolatileValue = (field: string, value: string | null) =>
+  value !== null && isVolatileField(field);

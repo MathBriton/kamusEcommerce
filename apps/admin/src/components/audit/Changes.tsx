@@ -1,4 +1,4 @@
-import { changeValue, isVolatileField } from "@/lib/audit";
+import { changeValue, isVolatileValue } from "@/lib/audit";
 import type { AuditChange } from "@/lib/schemas";
 
 /** Valor antigo: riscado e discreto. */
@@ -6,7 +6,7 @@ function Before({ change }: { change: AuditChange }) {
   return (
     <span
       className="text-muted line-through decoration-stone-400"
-      data-volatile={isVolatileField(change.field) || undefined}
+      data-volatile={isVolatileValue(change.field, change.before) || undefined}
     >
       {changeValue(change.before)}
     </span>
@@ -16,7 +16,10 @@ function Before({ change }: { change: AuditChange }) {
 /** Valor novo: em destaque. */
 function After({ change }: { change: AuditChange }) {
   return (
-    <span className="font-medium" data-volatile={isVolatileField(change.field) || undefined}>
+    <span
+      className="font-medium"
+      data-volatile={isVolatileValue(change.field, change.after) || undefined}
+    >
       {changeValue(change.after)}
     </span>
   );
@@ -80,13 +83,13 @@ export function ChangeTable({ changes }: { changes: AuditChange[] }) {
             <td className="px-3 py-2 text-muted">{change.field}</td>
             <td
               className="px-3 py-2 break-words text-muted"
-              data-volatile={isVolatileField(change.field) || undefined}
+              data-volatile={isVolatileValue(change.field, change.before) || undefined}
             >
               {changeValue(change.before)}
             </td>
             <td
               className="px-3 py-2 font-medium break-words"
-              data-volatile={isVolatileField(change.field) || undefined}
+              data-volatile={isVolatileValue(change.field, change.after) || undefined}
             >
               {changeValue(change.after)}
             </td>

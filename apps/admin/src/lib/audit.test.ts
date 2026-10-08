@@ -9,6 +9,7 @@ import {
   entityTypeLabel,
   isAuditAction,
   isVolatileField,
+  isVolatileValue,
   moduleLabel,
   subjectLink,
   subjectName,
@@ -149,5 +150,8 @@ describe("valores do antes → depois", () => {
   it("código do SKU é volátil nas capturas", () => {
     expect(isVolatileField("Código")).toBe(true);
     expect(isVolatileField("Preço")).toBe(false);
+    expect(isVolatileValue("Código", "CDLA1B2C-AREI-P")).toBe(true);
+    expect(isVolatileValue("Código", null)).toBe(false);
+    expect(isVolatileValue("Preço", "R$ 10,00")).toBe(false);
   });
 });

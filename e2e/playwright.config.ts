@@ -43,7 +43,8 @@ export default defineConfig({
       name: "backoffice",
       testMatch: /backoffice\.spec\.ts/,
       dependencies: ["compra"],
-      use: { viewport: { width: 1360, height: 900 } },
+      // Campos de data seguem o idioma do Chromium (não o do contexto): dd/mm/aaaa como no Brasil.
+      use: { viewport: { width: 1360, height: 900 }, launchOptions: { args: ["--lang=pt-BR"] } },
     },
   ],
 });
