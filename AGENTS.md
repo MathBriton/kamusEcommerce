@@ -23,7 +23,7 @@ Roteiro e releases: [`stack.md`](stack.md). Decisões: [`docs/adr/`](docs/adr). 
 | `packages/tokens` | Tokens de design (cores, fontes) compartilhados pelos dois fronts |
 | `e2e/` | Testes E2E e de regressão visual (Playwright) |
 
-Módulos: Catalog, Inventory, Cart, Orders, Payments, Identity, Reporting.
+Módulos: Catalog, Inventory, Cart, Orders, Payments, Identity, Reporting, Audit.
 
 ## Comandos
 

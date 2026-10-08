@@ -8,11 +8,13 @@ usam uma única série na cor de destaque (terracota); as cores de status ficam 
 
 ## Telas
 
-|                                             |                                                      |
-| ------------------------------------------- | ---------------------------------------------------- |
-| ![Login](telas/01-login.png)                | ![Painel com relatórios](telas/02-painel.png)        |
-| ![Lista de produtos](telas/03-produtos.png) | ![Editor de produto](telas/04-produto-editor.png)    |
-| ![Pedidos](telas/05-pedidos.png)            | ![Pedido despachado](telas/06-pedido-despachado.png) |
+|                                                  |                                                         |
+| ------------------------------------------------ | ------------------------------------------------------- |
+| ![Login](telas/01-login.png)                     | ![Painel com relatórios](telas/02-painel.png)           |
+| ![Lista de produtos](telas/03-produtos.png)      | ![Editor de produto](telas/04-produto-editor.png)       |
+| ![Pedidos](telas/05-pedidos.png)                 | ![Pedido despachado](telas/06-pedido-despachado.png)    |
+| ![Atividade](telas/07-atividade.png)             | ![Histórico do produto](telas/08-produto-historico.png) |
+| ![Excluir produto](telas/09-excluir-produto.png) | ![Lixeira](telas/10-lixeira.png)                        |
 
 ## Convenções
 

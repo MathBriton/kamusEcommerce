@@ -53,13 +53,14 @@ flowchart TB
 
 | Módulo | Responsabilidade | Armazenamento |
 |---|---|---|
-| Catalog | Produtos, SKUs, categorias, coleções, imagens | `catalog` (Postgres) |
+| Catalog | Produtos, SKUs, categorias, coleções, imagens; lixeira | `catalog` (Postgres) |
 | Inventory | Níveis de estoque e reservas | `inventory` (Postgres) |
 | Cart | Carrinho de visitantes e clientes | Redis |
 | Orders | Checkout, pedidos e máquina de estados | `orders` (Postgres) |
 | Payments | Integração com o FakePay e webhooks | `payments` (Postgres) |
 | Identity | Clientes, papéis (Admin) e autenticação | `identity` (Postgres) |
 | Reporting | Relatórios do backoffice, compostos via contratos | sem tabelas (read models na R3) |
+| Audit | Trilha de auditoria (somente inclusão), tela Atividade e histórico | `audit` (Postgres) |
 
 Dependências entre módulos (sempre via `*.Contracts`):
 
@@ -73,6 +74,8 @@ flowchart LR
     Orders -. "evento ReservationExpired" .-> Inventory
     Orders --> Identity
     Reporting --> Orders & Inventory & Catalog
+    Inventory --> Catalog
+    Inventory -. "evento SkusPurged" .-> Catalog
 ```
 
 Setas cheias são chamadas a contratos; tracejadas são eventos in-process que o módulo da esquerda
@@ -83,6 +86,35 @@ Regras (ver [ADR 0001](adr/0001-monolito-modular.md)):
 - um módulo expõe apenas `Kamus.<Modulo>.Contracts`;
 - nenhum módulo acessa as tabelas de outro;
 - a comunicação é in-process via contratos no MVP e passa a ser por eventos na R3.
+
+## Auditoria e exclusão reversível (R12)
+
+Catalog, Inventory e Orders declaram uma **política de auditoria** no registro do próprio
+DbContext; dois interceptors do EF Core (building blocks em `Kamus.Shared.Auditing`) fazem o resto
+em todo `SaveChangesAsync` ([ADR 0014](adr/0014-auditoria-por-interceptor-e-modulo-audit.md),
+[ADR 0015](adr/0015-exclusao-reversivel-com-lixeira.md)):
+
+```mermaid
+sequenceDiagram
+    participant S as Caso de uso (ex.: excluir produto)
+    participant SD as SoftDeleteInterceptor
+    participant AI as AuditingInterceptor
+    participant DB as Postgres
+    S->>SD: db.Remove(produto) + SaveChangesAsync
+    SD->>SD: DELETE vira UPDATE deleted_at (filhos com o mesmo instante)
+    SD->>AI: entradas já marcadas
+    AI->>AI: ator (ICurrentActor), allowlist da política, antes → depois
+    AI->>DB: BEGIN; UPDATE catalog.products ...
+    AI->>DB: INSERT audit.entries (IAuditLog, mesma transação)
+    AI->>DB: COMMIT
+```
+
+- Quem: o usuário da requisição (Admin ou Cliente) ou um ator **Sistema** nomeado
+  (`ActAs(System("FakePay"))`, expiração de reserva, expurgo automático).
+- `audit.entries` é somente inclusão: triggers recusam UPDATE e TRUNCATE, e DELETE de linhas com
+  menos de um ano; a retenção (2 anos) é aplicada por um worker.
+- Excluídos somem de toda consulta pelo filtro global; a lixeira usa `IgnoreQueryFilters()`; o
+  expurgo (30 dias) apaga de vez, remove as imagens do storage e avisa o Inventory (`SkusPurged`).
 
 ## Fluxo de compra (R2)
 

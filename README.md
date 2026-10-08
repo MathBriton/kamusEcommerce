@@ -60,7 +60,7 @@ apps/web          Storefront Next.js (App Router)
 apps/admin        Backoffice Next.js (catálogo, estoque, pedidos, relatórios)
 packages/tokens   Tokens de design compartilhados pelos dois fronts
 e2e/              Testes E2E e regressão visual (Playwright)
-src/modules/*     Módulos: Catalog, Inventory, Cart, Orders, Payments, Identity, Reporting
+src/modules/*     Módulos: Catalog, Inventory, Cart, Orders, Payments, Identity, Reporting, Audit
 src/shared        Building blocks (Result, IModule, infraestrutura)
 tests/            Testes unitários, de integração (Testcontainers) e de arquitetura
 docs/             ADRs e diagramas C4
