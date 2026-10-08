@@ -180,7 +180,7 @@ internal sealed class CatalogAdminService(
             .FirstOrDefaultAsync(p => p.Skus.Any(s => s.Id == skuId), ct);
         if (product is null)
         {
-            return Error.NotFound("catalog.sku_not_found", "SKU não encontrado.");
+            return SkuNotFound();
         }
 
         product.Skus.Single(s => s.Id == skuId).UpdatePrices(request.Price, request.SalePrice);
@@ -226,6 +226,7 @@ internal sealed class CatalogAdminService(
         return await ToDetailAsync(product, ct);
     }
 
+    /// <summary>A imagem vai para a lixeira (o arquivo só é apagado no expurgo).</summary>
     public async Task<Result<AdminProductDetail>> RemoveImageAsync(Guid id, Guid imageId, CancellationToken ct)
     {
         var product = await LoadAsync(id, ct);
@@ -234,11 +235,58 @@ internal sealed class CatalogAdminService(
             return NotFound();
         }
 
-        if (product.RemoveImage(imageId) is null)
+        if (product.RemoveImage(imageId, clock.GetUtcNow()) is not { } image)
         {
             return Error.NotFound("catalog.image_not_found", "Imagem não encontrada.");
         }
 
+        db.Images.Remove(image);
+        await db.SaveChangesAsync(ct);
+        return await ToDetailAsync(product, ct);
+    }
+
+    /// <summary>
+    /// Manda o produto para a lixeira com todos os SKUs e imagens ativos (mesmo instante, para que
+    /// voltem juntos). O estoque fica como está: se o produto for restaurado, volta com ele.
+    /// </summary>
+    public async Task<Result> DeleteProductAsync(Guid id, CancellationToken ct)
+    {
+        var product = await db.Products.Include(p => p.Skus).Include(p => p.Images)
+            .FirstOrDefaultAsync(p => p.Id == id, ct);
+        if (product is null)
+        {
+            return NotFound();
+        }
+
+        db.Products.Remove(product);
+        await db.SaveChangesAsync(ct);
+        return Result.Success();
+    }
+
+    /// <summary>
+    /// Manda um SKU para a lixeira. Produto publicado não pode ficar sem variação: a última precisa
+    /// esperar a despublicação.
+    /// </summary>
+    public async Task<Result<AdminProductDetail>> DeleteSkuAsync(Guid skuId, CancellationToken ct)
+    {
+        var product = await db.Products.Include(p => p.Skus).Include(p => p.Images)
+            .FirstOrDefaultAsync(p => p.Skus.Any(s => s.Id == skuId), ct);
+        if (product is null)
+        {
+            return SkuNotFound();
+        }
+
+        if (product.IsLastSkuOnSale(skuId))
+        {
+            return Error.Conflict("catalog.last_sku", "Despublique o produto antes de excluir a última variação.");
+        }
+
+        if (product.RemoveSku(skuId, clock.GetUtcNow()) is not { } sku)
+        {
+            return SkuNotFound();
+        }
+
+        db.Skus.Remove(sku);
         await db.SaveChangesAsync(ct);
         return await ToDetailAsync(product, ct);
     }
@@ -313,6 +361,8 @@ internal sealed class CatalogAdminService(
     }
 
     private static Error NotFound() => Error.NotFound("catalog.product_not_found", "Produto não encontrado.");
+
+    private static Error SkuNotFound() => Error.NotFound("catalog.sku_not_found", "SKU não encontrado.");
 }
 
 /// <summary>Identifica o formato da imagem pelos "magic bytes".</summary>

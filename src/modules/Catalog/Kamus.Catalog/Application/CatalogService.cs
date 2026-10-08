@@ -7,6 +7,7 @@ namespace Kamus.Catalog.Application;
 
 internal sealed class CatalogService(CatalogDbContext db, IFileStorage storage) : ICatalogService
 {
+    /// <summary>Só SKUs vendáveis: produto publicado e nada na lixeira (filtro global do contexto).</summary>
     public async Task<IReadOnlyDictionary<Guid, SkuSnapshot>> GetSkusAsync(IReadOnlyCollection<Guid> skuIds, CancellationToken cancellationToken = default)
     {
         var rows = await db.Skus.AsNoTracking()
@@ -45,7 +46,8 @@ internal sealed class CatalogService(CatalogDbContext db, IFileStorage storage) 
             return new Dictionary<Guid, SkuDescription>();
         }
 
-        return await db.Skus.AsNoTracking()
+        // Rótulos de auditoria precisam do nome mesmo de rascunhos e de itens na lixeira.
+        return await db.Skus.IgnoreQueryFilters().AsNoTracking()
             .Where(s => skuIds.Contains(s.Id))
             .Join(db.Products, s => s.ProductId, p => p.Id, (s, p) => new SkuDescription(s.Id, p.Id, p.Name, s.Color, s.Size, s.Code))
             .ToDictionaryAsync(d => d.SkuId, cancellationToken);

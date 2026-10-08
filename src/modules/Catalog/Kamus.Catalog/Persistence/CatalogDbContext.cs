@@ -1,4 +1,5 @@
 using Kamus.Catalog.Domain;
+using Kamus.Shared.Auditing;
 using Microsoft.EntityFrameworkCore;
 
 namespace Kamus.Catalog.Persistence;
@@ -7,6 +8,12 @@ internal sealed class CatalogDbContext(DbContextOptions<CatalogDbContext> option
 {
     public const string Schema = "catalog";
 
+    /// <summary>Filtro dos índices únicos: só os itens fora da lixeira disputam o valor.</summary>
+    private const string ActiveOnly = "deleted_at IS NULL";
+
+    /// <summary>Filtro dos índices da lixeira (poucas linhas: só o que foi excluído).</summary>
+    private const string InTrash = "deleted_at IS NOT NULL";
+
     public DbSet<Category> Categories => Set<Category>();
 
     public DbSet<Collection> Collections => Set<Collection>();
@@ -14,6 +21,8 @@ internal sealed class CatalogDbContext(DbContextOptions<CatalogDbContext> option
     public DbSet<Product> Products => Set<Product>();
 
     public DbSet<Sku> Skus => Set<Sku>();
+
+    public DbSet<ProductImage> Images => Set<ProductImage>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -43,12 +52,17 @@ internal sealed class CatalogDbContext(DbContextOptions<CatalogDbContext> option
             b.HasIndex(c => c.Slug).IsUnique();
         });
 
+        // Produtos, SKUs e imagens têm lixeira (ADR 0015): o filtro global esconde o que foi
+        // excluído e os índices únicos valem só para os ativos, para que um slug ou código possa
+        // ser reaproveitado. O índice parcial em deleted_at serve à lixeira e ao expurgo.
         modelBuilder.Entity<Product>(b =>
         {
+            b.HasSoftDelete();
             b.Property(p => p.Name).HasMaxLength(200);
             b.Property(p => p.Slug).HasMaxLength(200);
             b.Property(p => p.Brand).HasMaxLength(100);
-            b.HasIndex(p => p.Slug).IsUnique();
+            b.HasIndex(p => p.Slug).IsUnique().HasFilter(ActiveOnly);
+            b.HasIndex(p => p.DeletedAt).HasFilter(InTrash);
             b.HasIndex(p => new { p.CreatedAt, p.Id });
             b.HasOne(p => p.Category).WithMany().HasForeignKey(p => p.CategoryId).OnDelete(DeleteBehavior.Restrict);
             b.HasOne(p => p.Collection).WithMany().HasForeignKey(p => p.CollectionId).OnDelete(DeleteBehavior.SetNull);
@@ -60,24 +74,28 @@ internal sealed class CatalogDbContext(DbContextOptions<CatalogDbContext> option
 
         modelBuilder.Entity<Sku>(b =>
         {
+            b.HasSoftDelete();
             b.Property(s => s.Code).HasMaxLength(50);
             b.Property(s => s.Color).HasMaxLength(50);
             b.Property(s => s.ColorHex).HasMaxLength(7);
             b.Property(s => s.Size).HasMaxLength(10);
             b.Property(s => s.Price).HasPrecision(10, 2);
             b.Property(s => s.SalePrice).HasPrecision(10, 2);
-            b.HasIndex(s => s.Code).IsUnique();
-            b.HasIndex(s => new { s.ProductId, s.Color, s.Size }).IsUnique();
+            b.HasIndex(s => s.Code).IsUnique().HasFilter(ActiveOnly);
+            b.HasIndex(s => new { s.ProductId, s.Color, s.Size }).IsUnique().HasFilter(ActiveOnly);
             b.HasIndex(s => s.Size);
             b.HasIndex(s => s.Color);
+            b.HasIndex(s => s.DeletedAt).HasFilter(InTrash);
         });
 
         modelBuilder.Entity<ProductImage>(b =>
         {
             b.ToTable("product_images");
+            b.HasSoftDelete();
             b.Property(i => i.Color).HasMaxLength(50);
             b.Property(i => i.StorageKey).HasMaxLength(300);
             b.Property(i => i.Alt).HasMaxLength(300);
+            b.HasIndex(i => i.DeletedAt).HasFilter(InTrash);
         });
     }
 }
