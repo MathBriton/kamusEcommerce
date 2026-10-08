@@ -17,7 +17,13 @@ const shot = async (file: string, fullPage = false) => {
 };
 
 test.beforeAll(async ({ browser }) => {
-  page = await browser.newPage({ viewport: { width: 1360, height: 900 } });
+  // browser.newPage não herda o `use` do projeto: idioma e fuso precisam vir explícitos
+  // (campos de data em dd/mm/aaaa, horas no fuso da loja).
+  page = await browser.newPage({
+    viewport: { width: 1360, height: 900 },
+    locale: "pt-BR",
+    timezoneId: "America/Sao_Paulo",
+  });
 });
 
 test.afterAll(async () => {
@@ -128,4 +134,74 @@ test("despacha o pedido com rastreio", async () => {
   await expect(page.getByText("Rastreio: BR123456789BR").first()).toBeVisible();
   await settle(page);
   await shot("06-pedido-despachado.png", true);
+});
+
+test("atividade mostra quem fez o quê, com o valor anterior", async () => {
+  await page.getByRole("link", { name: "Atividade" }).click();
+  await expect(page.getByRole("heading", { name: "Atividade" })).toBeVisible();
+
+  // Só as ações do administrador: as da compra dependem do momento em que cada aviso de
+  // pagamento chegou e mudariam a ordem da lista entre execuções.
+  await page.selectOption("#usuario", { label: "Administrador Kamus" });
+  await page.getByRole("button", { name: "Filtrar" }).click();
+  await expect(page).toHaveURL(/usuario=/);
+
+  const shipped = page.getByRole("button", { name: /^Detalhes: Administrador Kamus, Pedido KM10003/ });
+  await expect(shipped).toHaveAttribute("aria-expanded", "false");
+  await shipped.click();
+  await expect(shipped).toHaveAttribute("aria-expanded", "true");
+  await expect(page.getByText("BR123456789BR").first()).toBeVisible();
+  await settle(page);
+  await shot("07-atividade.png", true);
+});
+
+test("histórico do produto lista cada alteração", async () => {
+  await page.getByRole("link", { name: "Produtos" }).click();
+  await page.getByRole("link", { name: "Camisa de Linho Areia" }).first().click();
+  await expect(page.getByRole("heading", { name: "Camisa de Linho Areia" })).toBeVisible();
+  await page.getByRole("link", { name: /^Histórico/ }).click();
+  await expect(page).toHaveURL(/aba=historico/);
+  await expect(page.getByText("Publicou").first()).toBeVisible();
+  await settle(page);
+  await shot("08-produto-historico.png", true);
+});
+
+test("exclui uma variação e um produto, com confirmação", async () => {
+  // variação: a GG da camisa vai para a lixeira
+  await page.getByRole("link", { name: "Dados e estoque" }).click();
+  await page.getByRole("button", { name: "Excluir Areia · GG" }).click();
+  await page.getByRole("dialog").getByRole("button", { name: "Mover para a lixeira" }).click();
+  await expect(page.getByRole("row", { name: /Areia · GG / })).toHaveCount(0);
+
+  // produto: o Boné Trucker some da loja
+  await page.getByRole("link", { name: "Produtos" }).click();
+  await expect(page.getByRole("heading", { name: "Produtos" })).toBeVisible();
+  await page.getByRole("button", { name: "Excluir Boné Trucker" }).click();
+  const dialog = page.getByRole("dialog");
+  await expect(dialog.getByRole("heading", { name: "Excluir “Boné Trucker”?" })).toBeVisible();
+  await settle(page);
+  await shot("09-excluir-produto.png");
+
+  await dialog.getByRole("button", { name: "Mover para a lixeira" }).click();
+  await expect(page).toHaveURL(/excluido=/);
+  await expect(page.getByText(/Boné Trucker” foi para a lixeira/)).toBeVisible();
+  const pdp = await page.request.get(`${urls.store}/api/catalog/products/bone-trucker`);
+  expect(pdp.status()).toBe(404);
+});
+
+test("lixeira restaura o produto como estava", async () => {
+  await page.getByRole("link", { name: /^Lixeira/ }).click();
+  await expect(page.getByRole("heading", { name: "Lixeira" })).toBeVisible();
+  await expect(page.getByRole("button", { name: "Restaurar Boné Trucker" })).toBeVisible();
+  await expect(
+    page.getByRole("button", { name: /^Restaurar Camisa de Linho Areia · Areia · GG/ }),
+  ).toBeVisible();
+  await settle(page);
+  await shot("10-lixeira.png");
+
+  await page.getByRole("button", { name: "Restaurar Boné Trucker" }).click();
+  await expect(page.getByRole("status").filter({ hasText: /Boné Trucker voltou/ })).toBeVisible();
+  await expect(page.getByRole("button", { name: "Restaurar Boné Trucker" })).toHaveCount(0);
+  const pdp = await page.request.get(`${urls.store}/api/catalog/products/bone-trucker`);
+  expect(pdp.ok()).toBeTruthy();
 });
