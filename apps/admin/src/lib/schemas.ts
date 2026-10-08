@@ -96,6 +96,24 @@ export const orderRowSchema = z.object({
   createdAt: z.string(),
 });
 
+/** Texto opcional da API: aceita ausente ou null e normaliza para null. */
+const optionalText = z
+  .string()
+  .nullish()
+  .transform((v) => v ?? null);
+
+/** Quem fez a alteração (auditoria e histórico do pedido). */
+export const auditActorKindSchema = z.enum(["Admin", "Customer", "System"]);
+
+export const orderStatusChangeSchema = z.object({
+  status: orderStatusSchema,
+  at: z.string(),
+  note: optionalText,
+  // Campos da R12: pedidos anteriores à auditoria não têm ator registrado.
+  actorKind: auditActorKindSchema.nullish().transform((v) => v ?? null),
+  actorName: optionalText,
+});
+
 export const orderDetailSchema = z.object({
   order: z.object({
     id: z.string(),
@@ -130,9 +148,7 @@ export const orderDetailSchema = z.object({
     subtotal: z.number(),
     total: z.number(),
     createdAt: z.string(),
-    history: z.array(
-      z.object({ status: orderStatusSchema, at: z.string(), note: z.string().nullable() }),
-    ),
+    history: z.array(orderStatusChangeSchema),
     canCancel: z.boolean(),
     trackingCode: z.string().nullable(),
   }),
@@ -181,6 +197,86 @@ export const overviewSchema = z.object({
   ),
 });
 
+/** Auditoria (R12): uma linha por alteração, só inclusão. */
+export const auditChangeSchema = z.object({
+  field: z.string(),
+  before: optionalText,
+  after: optionalText,
+});
+
+export const auditActorSchema = z.object({
+  kind: auditActorKindSchema,
+  id: optionalText,
+  name: z.string(),
+  email: optionalText,
+});
+
+export const auditEntrySchema = z.object({
+  id: z.string(),
+  occurredAt: z.string(),
+  module: z.string(),
+  entityType: z.string(),
+  entityId: z.string(),
+  action: z.string(),
+  subjectType: z.string(),
+  subjectId: z.string(),
+  subjectLabel: optionalText,
+  detail: optionalText,
+  changes: z.array(auditChangeSchema),
+  actor: auditActorSchema,
+  correlationId: optionalText,
+  ipAddress: optionalText,
+});
+
+/** Opções do filtro "Usuário": key é o id do usuário ou "system:<nome>". */
+export const auditActorOptionSchema = z.object({
+  key: z.string(),
+  kind: auditActorKindSchema,
+  name: z.string(),
+  email: optionalText,
+});
+
+/** Lixeira do catálogo. O tipo chega em minúsculas ("product"); normaliza por garantia. */
+export const trashItemTypeSchema = z
+  .string()
+  .transform((v) => v.toLowerCase())
+  .pipe(z.enum(["product", "sku", "image"]));
+
+const count = z
+  .number()
+  .nullish()
+  .transform((v) => v ?? 0);
+
+export const trashItemSchema = z.object({
+  type: trashItemTypeSchema,
+  id: z.string(),
+  productId: z.string(),
+  name: z.string(),
+  detail: optionalText,
+  imageUrl: optionalText,
+  deletedAt: z.string(),
+  deletedBy: z
+    .object({ id: optionalText, name: optionalText })
+    .nullish()
+    .transform((v) => v ?? { id: null, name: null }),
+  purgeAt: z.string(),
+  skuCount: count,
+  imageCount: count,
+  wasActive: z
+    .boolean()
+    .nullish()
+    .transform((v) => v ?? false),
+});
+
+export const trashPageSchema = z.object({
+  items: z.array(trashItemSchema),
+  total: z.number(),
+  counts: z.object({ product: count, sku: count, image: count }),
+});
+
+/** Resposta da restauração: frase pronta para o usuário. */
+export const restoreResultSchema = z.object({ message: z.string() });
+
 export type Me = z.infer<typeof meSchema>;
 export type ProductRow = z.infer<typeof productRowSchema>;
 export type ProductDetail = z.infer<typeof productDetailSchema>;
@@ -190,6 +286,14 @@ export type OrderRow = z.infer<typeof orderRowSchema>;
 export type OrderDetail = z.infer<typeof orderDetailSchema>;
 export type Overview = z.infer<typeof overviewSchema>;
 export type Collection = z.infer<typeof collectionSchema>;
+export type OrderStatusChange = z.infer<typeof orderStatusChangeSchema>;
+export type AuditActorKind = z.infer<typeof auditActorKindSchema>;
+export type AuditChange = z.infer<typeof auditChangeSchema>;
+export type AuditEntry = z.infer<typeof auditEntrySchema>;
+export type AuditActorOption = z.infer<typeof auditActorOptionSchema>;
+export type TrashItemType = z.infer<typeof trashItemTypeSchema>;
+export type TrashItem = z.infer<typeof trashItemSchema>;
+export type TrashPage = z.infer<typeof trashPageSchema>;
 
 export const ORDER_STATUS_LABEL: Record<OrderStatus, string> = {
   Created: "Criado",
