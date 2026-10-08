@@ -3,6 +3,7 @@
   <ItemGroup>
     <ProjectReference Include="../../../shared/Kamus.Shared/Kamus.Shared.csproj" />
     <ProjectReference Include="../Kamus.Inventory.Contracts/Kamus.Inventory.Contracts.csproj" />
+    <ProjectReference Include="../../Catalog/Kamus.Catalog.Contracts/Kamus.Catalog.Contracts.csproj" />
   </ItemGroup>
 
   <ItemGroup>

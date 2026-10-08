@@ -84,15 +84,19 @@ internal sealed class ReportingService(
         var levels = await inventory.GetLowStockAsync(LowStockThreshold, 500, ct);
         var skus = await catalog.GetSkusAsync([.. levels.Select(l => l.SkuId)], ct);
 
-        // Só SKUs de produtos publicados (os demais não estão à venda). Empates no disponível são
-        // desempatados por nome, cor e tamanho: a lista fica estável e fácil de ler.
-        return [.. levels
-            .Where(l => skus.ContainsKey(l.SkuId))
-            .Select(l =>
+        // Só SKUs à venda: o catálogo não devolve rascunhos, itens na lixeira nem SKUs expurgados
+        // (o estoque pode existir por um instante a mais que o SKU), e esses ficam de fora sem erro.
+        // Empates no disponível são desempatados por nome, cor e tamanho: a lista fica estável.
+        var items = new List<LowStockItem>(levels.Count);
+        foreach (var level in levels)
+        {
+            if (skus.TryGetValue(level.SkuId, out var s))
             {
-                var s = skus[l.SkuId];
-                return new LowStockItem(l.SkuId, s.Code, s.ProductName, s.Color, s.Size, l.Quantity, l.Reserved, l.Available);
-            })
+                items.Add(new LowStockItem(level.SkuId, s.Code, s.ProductName, s.Color, s.Size, level.Quantity, level.Reserved, level.Available));
+            }
+        }
+
+        return [.. items
             .OrderBy(i => i.Available)
             .ThenBy(i => i.ProductName, StringComparer.Ordinal)
             .ThenBy(i => i.Color, StringComparer.Ordinal)

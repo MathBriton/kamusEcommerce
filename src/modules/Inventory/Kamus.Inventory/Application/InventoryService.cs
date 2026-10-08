@@ -83,6 +83,33 @@ internal sealed class InventoryService(InventoryDbContext db, TimeProvider clock
         await db.SaveChangesAsync(cancellationToken);
     }
 
+    /// <summary>
+    /// Remove o estoque de SKUs que deixaram de existir no catálogo (expurgo). Reservas ativas
+    /// desses SKUs continuam válidas: ao confirmar ou liberar, a linha sem estoque é ignorada.
+    /// Retorna quantos registros de estoque foram removidos.
+    /// </summary>
+    public Task<int> RemoveStockAsync(IReadOnlyCollection<Guid> skuIds, CancellationToken cancellationToken = default)
+    {
+        var ids = skuIds.Distinct().ToList();
+        if (ids.Count == 0)
+        {
+            return Task.FromResult(0);
+        }
+
+        return ConcurrencyRetry.ExecuteAsync(db, async () =>
+        {
+            var levels = await db.StockLevels.Where(s => ids.Contains(s.SkuId)).ToListAsync(cancellationToken);
+            if (levels.Count == 0)
+            {
+                return 0;
+            }
+
+            db.StockLevels.RemoveRange(levels);
+            await db.SaveChangesAsync(cancellationToken);
+            return levels.Count;
+        });
+    }
+
     public Task<ReservationResult> ReserveAsync(Guid orderId, IReadOnlyCollection<ReservationLine> lines, TimeSpan timeToLive, CancellationToken cancellationToken = default) =>
         ConcurrencyRetry.ExecuteAsync(db, async () =>
         {
@@ -144,7 +171,11 @@ internal sealed class InventoryService(InventoryDbContext db, TimeProvider clock
             var levels = await LoadLevelsAsync(reservation, cancellationToken);
             foreach (var line in reservation.Lines)
             {
-                levels[line.SkuId].CommitReserved(line.Quantity);
+                // SKU expurgado do catálogo enquanto o pedido esperava o pagamento: não há mais estoque a baixar.
+                if (levels.TryGetValue(line.SkuId, out var level))
+                {
+                    level.CommitReserved(line.Quantity);
+                }
             }
 
             reservation.Close(ReservationStatus.Committed, clock.GetUtcNow());
@@ -205,7 +236,11 @@ internal sealed class InventoryService(InventoryDbContext db, TimeProvider clock
         var levels = await LoadLevelsAsync(reservation, ct);
         foreach (var line in reservation.Lines)
         {
-            levels[line.SkuId].ReleaseReserved(line.Quantity);
+            // SKU expurgado do catálogo: o estoque dele já foi removido, nada a devolver.
+            if (levels.TryGetValue(line.SkuId, out var level))
+            {
+                level.ReleaseReserved(line.Quantity);
+            }
         }
 
         reservation.Close(status, clock.GetUtcNow());

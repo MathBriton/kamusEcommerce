@@ -71,6 +71,8 @@ internal sealed class OrdersDbContext(DbContextOptions<OrdersDbContext> options)
                 h.HasKey("id");
                 h.Property(x => x.Status).HasConversion<string>().HasMaxLength(20);
                 h.Property(x => x.Note).HasMaxLength(300);
+                h.Property(x => x.ActorKind).HasMaxLength(20);
+                h.Property(x => x.ActorName).HasMaxLength(OrderStatusChange.ActorNameMaxLength);
             });
 
             b.Navigation(o => o.Items).UsePropertyAccessMode(PropertyAccessMode.Field);

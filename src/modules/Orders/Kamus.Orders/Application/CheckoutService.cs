@@ -4,6 +4,7 @@ using Kamus.Inventory.Contracts;
 using Kamus.Orders.Domain;
 using Kamus.Orders.Persistence;
 using Kamus.Payments.Contracts;
+using Kamus.Shared.Auditing;
 using Kamus.Shared.Results;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
@@ -16,6 +17,7 @@ internal sealed class CheckoutService(
     ICatalogService catalog,
     IInventoryService inventory,
     IPaymentService payments,
+    ICurrentActor currentActor,
     TimeProvider clock,
     IOptions<OrdersOptions> options,
     ILogger<CheckoutService> logger)
@@ -47,6 +49,10 @@ internal sealed class CheckoutService(
             return Error.Conflict("checkout.item_unavailable", $"{blocked.ProductName} ({blocked.Size}) não está disponível na quantidade escolhida.");
         }
 
+        // Criação e início do pagamento ficam no nome do cliente (histórico do pedido e auditoria).
+        var customer = currentActor.Customer();
+        using var actingAsCustomer = currentActor.ActAs(customer);
+
         var now = clock.GetUtcNow();
         var subtotal = items.Sum(i => i.LineTotal);
         var shipping = ShippingTable.Quote(request.Address.State, subtotal)!;
@@ -62,7 +68,8 @@ internal sealed class CheckoutService(
             [.. items.Select(i => new OrderItem(i.SkuId, i.SkuCode, i.ProductName, i.ProductPath, i.Color, i.Size, i.ImageUrl, i.UnitPrice, i.ListPrice, i.Quantity))],
             ToAddress(request.Address),
             shipping,
-            now);
+            now,
+            customer);
 
         var reservation = await inventory.ReserveAsync(
             order.Id,
@@ -81,7 +88,7 @@ internal sealed class CheckoutService(
 
         try
         {
-            order.StartPayment(now);
+            order.StartPayment(now, customer);
             db.Orders.Add(order);
             await db.SaveChangesAsync(ct);
 

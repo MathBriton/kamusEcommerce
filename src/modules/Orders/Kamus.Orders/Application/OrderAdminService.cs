@@ -4,6 +4,7 @@ using Kamus.Inventory.Contracts;
 using Kamus.Orders.Contracts;
 using Kamus.Orders.Domain;
 using Kamus.Orders.Persistence;
+using Kamus.Shared.Auditing;
 using Kamus.Shared.Results;
 using Microsoft.EntityFrameworkCore;
 
@@ -14,6 +15,7 @@ internal sealed class OrderAdminService(
     OrdersDbContext db,
     IInventoryService inventory,
     ICustomerDirectory customers,
+    ICurrentActor currentActor,
     TimeProvider clock) : IOrderReports
 {
     private static readonly OrderStatus[] Sold = [OrderStatus.Paid, OrderStatus.Shipped, OrderStatus.Delivered];
@@ -54,14 +56,14 @@ internal sealed class OrderAdminService(
     }
 
     public Task<Result<AdminOrderDetail>> ShipAsync(Guid id, string trackingCode, CancellationToken ct) =>
-        MutateAsync(id, o => o.Ship(clock.GetUtcNow(), trackingCode.Trim().ToUpperInvariant()), ct);
+        MutateAsync(id, o => o.Ship(clock.GetUtcNow(), currentActor.Actor, trackingCode.Trim().ToUpperInvariant()), ct);
 
     public Task<Result<AdminOrderDetail>> DeliverAsync(Guid id, CancellationToken ct) =>
-        MutateAsync(id, o => o.Deliver(clock.GetUtcNow()), ct);
+        MutateAsync(id, o => o.Deliver(clock.GetUtcNow(), currentActor.Actor), ct);
 
     public async Task<Result<AdminOrderDetail>> CancelAsync(Guid id, string reason, CancellationToken ct)
     {
-        var result = await MutateAsync(id, o => o.Cancel($"Cancelado pela loja: {reason.Trim()}", clock.GetUtcNow()), ct);
+        var result = await MutateAsync(id, o => o.Cancel($"Cancelado pela loja: {reason.Trim()}", clock.GetUtcNow(), currentActor.Actor), ct);
         if (result.IsSuccess)
         {
             await inventory.ReleaseReservationAsync(id, ct);
@@ -107,6 +109,7 @@ internal sealed class OrderAdminService(
             .DistinctBy(i => i.SkuId)
             .ToDictionary(i => i.SkuId);
 
+        // O snapshot do pedido independe do catálogo: SKU excluído ou expurgado continua no ranking.
         return [.. items.Select(i =>
         {
             var s = snapshots[i.SkuId];
@@ -135,7 +138,7 @@ internal sealed class OrderAdminService(
     private async Task<AdminOrderDetail> ToAdminDetailAsync(Order order, CancellationToken ct)
     {
         var customer = await customers.FindAsync(order.CustomerId, ct);
-        return new AdminOrderDetail(OrderQueries.ToDetail(order), order.CustomerId, customer?.Email, customer?.FullName, order.PaymentId);
+        return new AdminOrderDetail(OrderQueries.ToDetail(order, includeActors: true), order.CustomerId, customer?.Email, customer?.FullName, order.PaymentId);
     }
 }
 

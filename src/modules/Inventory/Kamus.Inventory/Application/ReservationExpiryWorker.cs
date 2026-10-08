@@ -1,4 +1,5 @@
 using Kamus.Inventory.Contracts;
+using Kamus.Shared.Auditing;
 using Kamus.Shared.Events;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
@@ -17,13 +18,19 @@ internal sealed class InventoryOptions
     public TimeSpan ExpiryCheckInterval { get; set; } = TimeSpan.FromSeconds(30);
 }
 
-/// <summary>Varre periodicamente as reservas vencidas, devolve o estoque e avisa o módulo Orders.</summary>
+/// <summary>
+/// Varre periodicamente as reservas vencidas, devolve o estoque e avisa o módulo Orders. O que muda
+/// por causa da expiração (ex.: o pedido cancelado) fica no nome do sistema <see cref="Actor"/>.
+/// </summary>
 internal sealed class ReservationExpiryWorker(
     IServiceScopeFactory scopes,
     TimeProvider clock,
     IOptions<InventoryOptions> options,
     ILogger<ReservationExpiryWorker> logger) : BackgroundService
 {
+    /// <summary>Ator automático da expiração (histórico do pedido e auditoria).</summary>
+    public static readonly AuditActor Actor = AuditActor.System("Expiração da reserva");
+
     protected override async Task ExecuteAsync(CancellationToken stoppingToken)
     {
         using var timer = new PeriodicTimer(options.Value.ExpiryCheckInterval);
@@ -43,6 +50,7 @@ internal sealed class ReservationExpiryWorker(
     public async Task RunOnceAsync(DateTimeOffset now, CancellationToken cancellationToken)
     {
         await using var scope = scopes.CreateAsyncScope();
+        using var actingAsSystem = scope.ServiceProvider.GetRequiredService<ICurrentActor>().ActAs(Actor);
         var inventory = scope.ServiceProvider.GetRequiredService<InventoryService>();
         var events = scope.ServiceProvider.GetRequiredService<IEventPublisher>();
 
