@@ -39,6 +39,7 @@ public sealed class IdentityModule : IModule
                 options.Lockout.DefaultLockoutTimeSpan = TimeSpan.FromMinutes(5);
             })
             .AddRoles<IdentityRole<Guid>>()
+            .AddClaimsPrincipalFactory<KamusClaimsPrincipalFactory>()
             .AddEntityFrameworkStores<KamusIdentityDbContext>()
             .AddSignInManager()
             .AddErrorDescriber<PortugueseIdentityErrorDescriber>();
