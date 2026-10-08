@@ -3,6 +3,7 @@ using Kamus.IntegrationTests.Infrastructure;
 using Kamus.Shared.Auditing;
 using Kamus.Shared.Infrastructure;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.Extensions.DependencyInjection;
 
 namespace Kamus.IntegrationTests.Audit;
@@ -174,6 +175,24 @@ public sealed class AuditInterceptorTests(KamusApiFactory factory)
     }
 
     [Fact]
+    public async Task Rotulo_assincrono_pode_consultar_o_proprio_contexto_durante_o_SaveChanges()
+    {
+        var id = await CreateProbeAsync("Areia", "Preto");
+
+        // Só a variação é carregada: o rótulo (nome do pai) vem de uma consulta ao mesmo DbContext.
+        await InScopeAsync(async (db, _) =>
+        {
+            db.Parts.Remove(await db.Parts.FirstAsync(p => p.ProbeId == id && p.Color == "Preto", Ct));
+            return await db.SaveChangesAsync(Ct);
+        });
+
+        var deleted = (await EntriesAsync(id)).Single(e => e.Action == "deleted");
+        deleted.EntityType.Should().Be("ProbePart");
+        deleted.SubjectLabel.Should().Be("Camisa de Linho");
+        deleted.Detail.Should().Be("Cor Preto");
+    }
+
+    [Fact]
     public async Task Falha_ao_gravar_a_auditoria_desfaz_a_alteracao()
     {
         var host = await ProbeHost.GetAsync(factory);
@@ -278,6 +297,17 @@ public sealed class AuditInterceptorTests(KamusApiFactory factory)
         (await EntriesAsync(id)).Should().BeEmpty();
         var deletedAt = await InScopeAsync((db, _) => db.Probes.IgnoreQueryFilters().Where(p => p.Id == id).Select(p => p.DeletedAt).SingleAsync(Ct));
         deletedAt.Should().NotBeNull();
+    }
+
+    [Fact]
+    public async Task Interceptors_por_escopo_reaproveitam_o_service_provider_interno_do_EF()
+    {
+        // Cada requisição ganha interceptors próprios (com o ator dela); se isso criasse um service
+        // provider interno do EF por requisição, a aplicação degradaria e o EF acabaria lançando erro.
+        var first = await InScopeAsync((db, _) => Task.FromResult(db.GetService<IModelSource>()));
+        var second = await InScopeAsync((db, _) => Task.FromResult(db.GetService<IModelSource>()));
+
+        first.Should().BeSameAs(second);
     }
 
     [Fact]
