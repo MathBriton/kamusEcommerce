@@ -1,3 +1,4 @@
+using System.Diagnostics.CodeAnalysis;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.ChangeTracking;
 using Microsoft.EntityFrameworkCore.Diagnostics;
@@ -16,8 +17,8 @@ namespace Kamus.Shared.Auditing;
 /// houver transação corrente, abre uma.</item>
 /// <item><c>SavedChangesAsync</c>: resolve rótulos que dependem de valores gerados no insert, grava os
 /// registros e faz commit da transação que abriu.</item>
-/// <item>Falha/cancelamento: rollback da transação que abriu. Se o SaveChanges for refeito (ex.:
-/// <c>ConcurrencyRetry</c>), a nova tentativa abre outra transação.</item>
+/// <item>Falha, cancelamento ou conflito de concorrência: rollback da transação que abriu. Se o
+/// SaveChanges for refeito (ex.: <c>ConcurrencyRetry</c>), a nova tentativa abre outra transação.</item>
 /// </list>
 /// Não audita <c>ExecuteUpdate</c>/<c>ExecuteDelete</c> nem SQL direto. SaveChanges síncrono com algo a
 /// auditar lança <see cref="InvalidOperationException"/>.
@@ -93,13 +94,13 @@ internal sealed class AuditingInterceptor(
         var owned = context.Database.CurrentTransaction is null
             ? await context.Database.BeginTransactionAsync(cancellationToken)
             : null;
-        _saves[context] = new PendingSave(audits, owned);
+        Track(context, new PendingSave(audits, owned));
         return result;
     }
 
     public override async ValueTask<int> SavedChangesAsync(SaveChangesCompletedEventData eventData, int result, CancellationToken cancellationToken = default)
     {
-        if (eventData.Context is not { } context || !_saves.Remove(context, out var save))
+        if (eventData.Context is not { } context || !TryUntrack(context, out var save))
         {
             return result;
         }
@@ -191,9 +192,33 @@ internal sealed class AuditingInterceptor(
         return records;
     }
 
+    private void Track(DbContext context, PendingSave save)
+    {
+        _saves[context] = save;
+        context.SaveChangesFailed += OnSaveChangesFailed;
+    }
+
+    private bool TryUntrack(DbContext context, [NotNullWhen(true)] out PendingSave? save)
+    {
+        if (!_saves.Remove(context, out save))
+        {
+            return false;
+        }
+
+        context.SaveChangesFailed -= OnSaveChangesFailed;
+        return true;
+    }
+
+    /// <summary>
+    /// Evento do próprio DbContext: dispara também em <see cref="DbUpdateConcurrencyException"/>, caso em
+    /// que o EF não chama <c>SaveChangesFailed</c> dos interceptors. Sem isso, a transação aberta aqui
+    /// ficaria pendurada no contexto depois de um conflito de concorrência.
+    /// </summary>
+    private void OnSaveChangesFailed(object? sender, SaveChangesFailedEventArgs e) => Discard(sender as DbContext);
+
     private async ValueTask DiscardAsync(DbContext? context)
     {
-        if (context is not null && _saves.Remove(context, out var save))
+        if (context is not null && TryUntrack(context, out var save))
         {
             await RollbackAsync(save);
         }
@@ -201,7 +226,7 @@ internal sealed class AuditingInterceptor(
 
     private void Discard(DbContext? context)
     {
-        if (context is null || !_saves.Remove(context, out var save) || save.OwnedTransaction is not { } transaction)
+        if (context is null || !TryUntrack(context, out var save) || save.OwnedTransaction is not { } transaction)
         {
             return;
         }
