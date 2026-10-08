@@ -1,0 +1,12 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <ItemGroup>
+    <ProjectReference Include="../../../shared/Kamus.Shared/Kamus.Shared.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <InternalsVisibleTo Include="Kamus.UnitTests" />
+    <InternalsVisibleTo Include="Kamus.IntegrationTests" />
+  </ItemGroup>
+
+</Project>

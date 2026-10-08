@@ -1,3 +1,4 @@
+using Kamus.Shared.Auditing;
 using Kamus.Shared.Infrastructure;
 
 namespace Kamus.Api;
@@ -25,9 +26,13 @@ internal static class ModuleInitializer
             .Where(s => seed || !s.IsSampleData)
             .OrderBy(s => s.Order);
 
-        foreach (var seeder in seeders)
+        // Carga inicial (catálogo de exemplo, administrador) não é atividade de ninguém: fica fora da auditoria.
+        using (scope.ServiceProvider.GetRequiredService<ICurrentActor>().SuppressAuditing())
         {
-            await seeder.SeedAsync(ct);
+            foreach (var seeder in seeders)
+            {
+                await seeder.SeedAsync(ct);
+            }
         }
     }
 }

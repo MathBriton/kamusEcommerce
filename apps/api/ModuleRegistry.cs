@@ -1,3 +1,4 @@
+using Kamus.Audit;
 using Kamus.Cart;
 using Kamus.Catalog;
 using Kamus.Identity;
@@ -21,5 +22,6 @@ internal static class ModuleRegistry
         new PaymentsModule(),
         new IdentityModule(),
         new ReportingModule(),
+        new AuditModule(),
     ];
 }
