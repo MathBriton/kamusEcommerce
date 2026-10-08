@@ -125,8 +125,11 @@ internal sealed class CatalogQueries(CatalogDbContext db, IInventoryService inve
         var breadcrumb = await GetBreadcrumbAsync(product.Category, ct);
         var cheapest = Cheapest(product.Skus);
 
+        // Ordem explícita das cores (o banco não garante a ordem dos SKUs): a mesma do desempate da
+        // foto do card na listagem, para a PDP abrir na cor que o cliente acabou de ver.
         var colors = product.Skus
             .GroupBy(s => new { s.Color, s.ColorHex })
+            .OrderBy(g => g.Key.Color, StringComparer.Ordinal)
             .Select(g => new ColorOption(
                 g.Key.Color,
                 g.Key.ColorHex,
@@ -242,7 +245,7 @@ internal sealed class CatalogQueries(CatalogDbContext db, IInventoryService inve
                 cheapest.Price,
                 cheapest.SalePrice,
                 p.Image is { } i ? new ImageDto(storage.GetPublicUrl(i.StorageKey), i.Alt) : null,
-                [.. p.Skus.DistinctBy(s => s.Color).Select(s => new ColorDto(s.Color, s.ColorHex))]);
+                [.. p.Skus.DistinctBy(s => s.Color).OrderBy(s => s.Color, StringComparer.Ordinal).Select(s => new ColorDto(s.Color, s.ColorHex))]);
         });
     }
 
