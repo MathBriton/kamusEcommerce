@@ -1,6 +1,7 @@
 using Kamus.Payments.Contracts;
 using Kamus.Payments.Domain;
 using Kamus.Payments.Persistence;
+using Kamus.Shared.Auditing;
 using Kamus.Shared.Events;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
@@ -14,23 +15,34 @@ namespace Kamus.Payments.Application;
 /// Se o aviso falhar, o <see cref="PaymentNotificationDispatcher"/> tenta de novo depois
 /// (um "outbox" simplificado; a R3 formaliza o padrão).
 /// </summary>
+/// <remarks>
+/// Quem reage aos eventos (pedido pago, baixa do estoque) age em nome do provedor: na auditoria e no
+/// histórico do pedido, o ator é o sistema <see cref="Actor"/>, não o usuário da requisição.
+/// </remarks>
 internal sealed class PaymentResultNotifier(
     PaymentsDbContext db,
     IEventPublisher events,
+    ICurrentActor currentActor,
     TimeProvider clock,
     ILogger<PaymentResultNotifier> logger)
 {
+    /// <summary>Ator automático das mudanças causadas pelo resultado do pagamento.</summary>
+    public static readonly AuditActor Actor = AuditActor.System("FakePay");
+
     public async Task NotifyAsync(Payment payment, CancellationToken ct)
     {
         try
         {
-            if (payment.Status == PaymentStatus.Approved)
+            using (currentActor.ActAs(Actor))
             {
-                await events.PublishAsync(new PaymentApproved(payment.OrderId, payment.Id), ct);
-            }
-            else
-            {
-                await events.PublishAsync(new PaymentDeclined(payment.OrderId, payment.Id, payment.FailureReason ?? "Pagamento recusado"), ct);
+                if (payment.Status == PaymentStatus.Approved)
+                {
+                    await events.PublishAsync(new PaymentApproved(payment.OrderId, payment.Id), ct);
+                }
+                else
+                {
+                    await events.PublishAsync(new PaymentDeclined(payment.OrderId, payment.Id, payment.FailureReason ?? "Pagamento recusado"), ct);
+                }
             }
 
             payment.MarkOrderNotified(clock.GetUtcNow());
