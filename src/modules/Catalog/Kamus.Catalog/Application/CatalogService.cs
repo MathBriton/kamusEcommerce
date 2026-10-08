@@ -37,4 +37,17 @@ internal sealed class CatalogService(CatalogDbContext db, IFileStorage storage) 
             r.Sku.SalePrice,
             r.Image is null ? null : storage.GetPublicUrl(r.Image)));
     }
+
+    public async Task<IReadOnlyDictionary<Guid, SkuDescription>> DescribeSkusAsync(IReadOnlyCollection<Guid> skuIds, CancellationToken cancellationToken = default)
+    {
+        if (skuIds.Count == 0)
+        {
+            return new Dictionary<Guid, SkuDescription>();
+        }
+
+        return await db.Skus.AsNoTracking()
+            .Where(s => skuIds.Contains(s.Id))
+            .Join(db.Products, s => s.ProductId, p => p.Id, (s, p) => new SkuDescription(s.Id, p.Id, p.Name, s.Color, s.Size, s.Code))
+            .ToDictionaryAsync(d => d.SkuId, cancellationToken);
+    }
 }
