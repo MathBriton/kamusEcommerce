@@ -10,14 +10,20 @@ import { ORDER_STATUS_LABEL, type OrderStatus } from "@/lib/schemas";
 
 /** Componentes do backoffice: os mesmos tokens da loja, com densidade de ferramenta interna. */
 
-type Variant = "primary" | "secondary" | "danger" | "ghost";
+type Variant = "primary" | "secondary" | "danger" | "destructive" | "ghost";
 
 const VARIANT: Record<Variant, string> = {
   primary: "bg-ink text-paper hover:bg-accent disabled:hover:bg-ink",
   secondary: "border border-line bg-surface hover:border-ink",
   danger: "border border-sale/40 bg-surface text-sale hover:bg-sale hover:text-white",
+  /** Confirmação de algo destrutivo (botão principal dos diálogos de exclusão). */
+  destructive: "bg-sale text-white hover:bg-red-800 disabled:hover:bg-sale",
   ghost: "text-muted hover:text-ink",
 };
+
+/** Classes de botão para um `<a>` comum (downloads e rotas de API, fora do roteador do Next). */
+export const buttonClassName = (variant: Variant = "primary") =>
+  `inline-flex h-9 items-center justify-center gap-2 rounded-md px-3.5 text-sm font-medium transition-colors ${VARIANT[variant]}`;
 
 export function Button({
   variant = "primary",

@@ -1,7 +1,8 @@
 import type { Metadata } from "next";
 import Image from "next/image";
 import Link from "next/link";
-import { LinkButton, PageHeader, Pagination, PublishedBadge, Table } from "@/components/ui";
+import { DeleteProductButton } from "@/components/products/DeleteProductButton";
+import { Alert, LinkButton, PageHeader, Pagination, PublishedBadge, Table } from "@/components/ui";
 import { formatDateTime, formatInt, formatPrice } from "@/lib/format";
 import { adminPage, productRowSchema } from "@/lib/schemas";
 import { apiGetWithSession } from "@/lib/server-api";
@@ -19,6 +20,8 @@ export default async function ProductsPage(props: PageProps<"/produtos">) {
   const search = typeof params.busca === "string" ? params.busca : "";
   const status = typeof params.status === "string" ? params.status : "";
   const page = Math.max(1, Number(params.pagina) || 1);
+  // Nome do produto que acabou de ir para a lixeira (aviso de sucesso depois da exclusão).
+  const deleted = typeof params.excluido === "string" ? params.excluido.trim() : "";
 
   const query = new URLSearchParams({ page: String(page), pageSize: "20" });
   if (search) query.set("search", search);
@@ -48,6 +51,17 @@ export default async function ProductsPage(props: PageProps<"/produtos">) {
         description={`${formatInt(data.total)} no catálogo`}
         actions={<LinkButton href="/produtos/novo">Novo produto</LinkButton>}
       />
+
+      {deleted && (
+        <div className="mb-4">
+          <Alert tone="success">
+            “{deleted}” foi para a lixeira.{" "}
+            <Link href="/lixeira" className="font-medium underline underline-offset-4">
+              Ver lixeira
+            </Link>
+          </Alert>
+        </div>
+      )}
 
       <div className="mb-4 flex flex-wrap items-center gap-3">
         <form className="flex gap-2" action="/produtos">
@@ -87,12 +101,15 @@ export default async function ProductsPage(props: PageProps<"/produtos">) {
             <th className="px-4 py-2.5 text-right font-medium">A partir de</th>
             <th className="px-4 py-2.5 text-right font-medium">Disponível</th>
             <th className="px-4 py-2.5 font-medium">Atualizado</th>
+            <th className="w-14 px-2 py-2.5">
+              <span className="sr-only">Ações</span>
+            </th>
           </tr>
         }
       >
         {data.items.length === 0 && (
           <tr>
-            <td colSpan={7} className="px-4 py-10 text-center text-muted">
+            <td colSpan={8} className="px-4 py-10 text-center text-muted">
               Nenhum produto encontrado.
             </td>
           </tr>
@@ -134,6 +151,13 @@ export default async function ProductsPage(props: PageProps<"/produtos">) {
             </td>
             <td className="px-4 py-2.5 text-xs text-muted" data-volatile>
               {formatDateTime(p.updatedAt)}
+            </td>
+            <td className="px-2 py-1.5 text-right">
+              <DeleteProductButton
+                variant="icon"
+                product={{ id: p.id, name: p.name, skuCount: p.skuCount }}
+                redirectTo={href({ pagina: data.page, excluido: p.name })}
+              />
             </td>
           </tr>
         ))}

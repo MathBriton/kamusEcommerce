@@ -1,7 +1,11 @@
 "use client";
 
 import Image from "next/image";
-import { useState } from "react";
+import Link from "next/link";
+import { useRouter } from "next/navigation";
+import { useState, type ReactNode } from "react";
+import { ConfirmDialog } from "@/components/ConfirmDialog";
+import { Icon } from "@/components/icons";
 import {
   Alert,
   Button,
@@ -14,19 +18,30 @@ import {
 import type { CategoryOption } from "@/lib/catalog-options";
 import { formatPrice } from "@/lib/format";
 import {
+  productDetailSchema,
   readProblem,
   skuFormSchema,
   type Collection,
   type ProductDetail,
   type Sku,
 } from "@/lib/schemas";
+import { TRASH_RETENTION_DAYS } from "@/lib/trash";
+import { DeleteProductButton } from "./DeleteProductButton";
 import { ProductForm } from "./ProductForm";
+
+export type ProductTab = "dados" | "historico";
 
 type Props = {
   initial: ProductDetail;
   categories: CategoryOption[];
   collections: Collection[];
   storeUrl: string;
+  /** Aba ativa (?aba=historico). */
+  tab?: ProductTab;
+  /** Conteúdo da aba Histórico, renderizado no servidor. */
+  history?: ReactNode;
+  /** Quantas entradas o histórico tem (só conhecido na aba Histórico). */
+  historyCount?: number | null;
 };
 
 type Feedback = { ok: boolean; text: string } | null;
@@ -35,10 +50,21 @@ type Feedback = { ok: boolean; text: string } | null;
 const skuLabel = (sku: Sku) => `${sku.color} · ${sku.size === "U" ? "Único" : sku.size}`;
 
 /** Editor completo: dados, publicação, variações (SKU), preços, estoque e imagens por cor. */
-export function ProductEditor({ initial, categories, collections, storeUrl }: Props) {
+export function ProductEditor({
+  initial,
+  categories,
+  collections,
+  storeUrl,
+  tab = "dados",
+  history,
+  historyCount = null,
+}: Props) {
+  const router = useRouter();
   const [product, setProduct] = useState(initial);
   const [feedback, setFeedback] = useState<Feedback>(null);
   const [busy, setBusy] = useState(false);
+  const [skuToDelete, setSkuToDelete] = useState<Sku | null>(null);
+  const [deleteError, setDeleteError] = useState<string | null>(null);
 
   /** Executa uma chamada que devolve o produto atualizado. */
   async function call(url: string, init: RequestInit, success: string) {
@@ -52,6 +78,8 @@ export function ProductEditor({ initial, categories, collections, storeUrl }: Pr
       }
       setProduct(await response.json());
       setFeedback({ ok: true, text: success });
+      // Na aba Histórico, a nova entrada da auditoria aparece sem recarregar a página.
+      if (tab === "historico") router.refresh();
       return true;
     } finally {
       setBusy(false);
@@ -87,7 +115,37 @@ export function ProductEditor({ initial, categories, collections, storeUrl }: Pr
     );
   }
 
+  /** SKU vai para a lixeira; a API devolve o produto atualizado ou 204 (aí recarrega). */
+  async function deleteSku(sku: Sku) {
+    setBusy(true);
+    setDeleteError(null);
+    try {
+      const response = await fetch(`/api/admin/catalog/skus/${sku.id}`, { method: "DELETE" });
+      if (!response.ok) {
+        setDeleteError(await readProblem(response));
+        return;
+      }
+      const body = response.status === 204 ? null : await response.json().catch(() => null);
+      const updated = productDetailSchema.safeParse(body);
+      if (updated.success) {
+        setProduct(updated.data);
+      } else {
+        const reload = await fetch(`/api/admin/catalog/products/${product.id}`);
+        if (reload.ok) setProduct(productDetailSchema.parse(await reload.json()));
+      }
+      setSkuToDelete(null);
+      setFeedback({ ok: true, text: `${skuLabel(sku)} foi para a lixeira.` });
+      router.refresh();
+    } catch {
+      setDeleteError("Não foi possível falar com o servidor. Tente novamente.");
+    } finally {
+      setBusy(false);
+    }
+  }
+
   const colors = [...new Map(product.skus.map((s) => [s.color, s.colorHex])).entries()];
+  const tabClass = (active: boolean) =>
+    `rounded px-3 py-1 ${active ? "bg-ink text-paper" : "text-muted hover:text-ink"}`;
 
   return (
     <div className="mt-3 space-y-6">
@@ -139,90 +197,146 @@ export function ProductEditor({ initial, categories, collections, storeUrl }: Pr
                 Publicar
               </Button>
             )}
+            <DeleteProductButton
+              product={{
+                id: product.id,
+                name: product.name,
+                skuCount: product.skus.length,
+                imageCount: product.images.length,
+              }}
+            />
           </>
         }
       />
 
+      <nav
+        aria-label="Seções do produto"
+        className="flex w-fit gap-1 rounded-md border border-line bg-surface p-1 text-sm"
+      >
+        <Link
+          href={`/produtos/${product.id}`}
+          aria-current={tab === "dados" ? "page" : undefined}
+          className={tabClass(tab === "dados")}
+        >
+          Dados e estoque
+        </Link>
+        <Link
+          href={`/produtos/${product.id}?aba=historico`}
+          aria-current={tab === "historico" ? "page" : undefined}
+          className={tabClass(tab === "historico")}
+        >
+          Histórico
+          {historyCount !== null && (
+            <span className="tabular ml-1.5 opacity-75">{historyCount}</span>
+          )}
+        </Link>
+      </nav>
+
       {feedback && <Alert tone={feedback.ok ? "success" : "error"}>{feedback.text}</Alert>}
 
-      <div className="grid gap-6 lg:grid-cols-[1fr_380px]">
-        <div className="min-w-0 space-y-6">
-          <Card title="Variações e estoque">
-            {product.skus.length === 0 ? (
-              <p className="text-sm text-muted">
-                Nenhum SKU ainda. Adicione uma cor com seus tamanhos para poder publicar.
-              </p>
-            ) : (
-              <SkuTable
-                skus={product.skus}
-                busy={busy}
-                call={call}
-                json={json}
-                adjustStock={adjustStock}
-              />
-            )}
-          </Card>
+      {tab === "historico" ? (
+        history
+      ) : (
+        <div className="grid gap-6 lg:grid-cols-[1fr_380px]">
+          <div className="min-w-0 space-y-6">
+            <Card title="Variações e estoque">
+              {product.skus.length === 0 ? (
+                <p className="text-sm text-muted">
+                  Nenhum SKU ainda. Adicione uma cor com seus tamanhos para poder publicar.
+                </p>
+              ) : (
+                <SkuTable
+                  skus={product.skus}
+                  busy={busy}
+                  call={call}
+                  json={json}
+                  adjustStock={adjustStock}
+                  onDelete={(sku) => {
+                    setDeleteError(null);
+                    setSkuToDelete(sku);
+                  }}
+                />
+              )}
+            </Card>
 
-          <Card title="Adicionar cor e tamanhos">
-            <AddSkusForm
-              busy={busy}
-              onSubmit={(body) =>
-                call(
-                  `/api/admin/catalog/products/${product.id}/skus`,
-                  json("POST", body),
-                  "Variações adicionadas.",
-                )
-              }
+            <Card title="Adicionar cor e tamanhos">
+              <AddSkusForm
+                busy={busy}
+                onSubmit={(body) =>
+                  call(
+                    `/api/admin/catalog/products/${product.id}/skus`,
+                    json("POST", body),
+                    "Variações adicionadas.",
+                  )
+                }
+              />
+            </Card>
+
+            <Card title="Imagens">
+              {colors.length === 0 ? (
+                <p className="text-sm text-muted">
+                  As imagens são organizadas por cor: cadastre um SKU primeiro.
+                </p>
+              ) : (
+                <div className="space-y-6">
+                  {colors.map(([color, hex]) => (
+                    <ColorImages
+                      key={color}
+                      color={color}
+                      hex={hex}
+                      images={product.images.filter((i) => i.color === color)}
+                      busy={busy}
+                      onUpload={(file) => {
+                        const form = new FormData();
+                        form.append("file", file);
+                        form.append("color", color);
+                        return call(
+                          `/api/admin/catalog/products/${product.id}/images`,
+                          { method: "POST", body: form },
+                          "Imagem enviada.",
+                        );
+                      }}
+                      onRemove={async (imageId) => {
+                        const removed = await call(
+                          `/api/admin/catalog/products/${product.id}/images/${imageId}`,
+                          { method: "DELETE" },
+                          "Imagem movida para a lixeira.",
+                        );
+                        if (removed) router.refresh();
+                      }}
+                    />
+                  ))}
+                </div>
+              )}
+            </Card>
+          </div>
+
+          <Card title="Dados gerais" className="h-fit">
+            <ProductForm
+              product={product}
+              categories={categories}
+              collections={collections}
+              onSaved={setProduct}
             />
           </Card>
-
-          <Card title="Imagens">
-            {colors.length === 0 ? (
-              <p className="text-sm text-muted">
-                As imagens são organizadas por cor: cadastre um SKU primeiro.
-              </p>
-            ) : (
-              <div className="space-y-6">
-                {colors.map(([color, hex]) => (
-                  <ColorImages
-                    key={color}
-                    color={color}
-                    hex={hex}
-                    images={product.images.filter((i) => i.color === color)}
-                    busy={busy}
-                    onUpload={(file) => {
-                      const form = new FormData();
-                      form.append("file", file);
-                      form.append("color", color);
-                      return call(
-                        `/api/admin/catalog/products/${product.id}/images`,
-                        { method: "POST", body: form },
-                        "Imagem enviada.",
-                      );
-                    }}
-                    onRemove={(imageId) =>
-                      call(
-                        `/api/admin/catalog/products/${product.id}/images/${imageId}`,
-                        { method: "DELETE" },
-                        "Imagem removida.",
-                      )
-                    }
-                  />
-                ))}
-              </div>
-            )}
-          </Card>
         </div>
+      )}
 
-        <Card title="Dados gerais" className="h-fit">
-          <ProductForm
-            product={product}
-            categories={categories}
-            collections={collections}
-            onSaved={setProduct}
-          />
-        </Card>
-      </div>
+      <ConfirmDialog
+        open={skuToDelete !== null}
+        title={skuToDelete ? `Excluir ${skuLabel(skuToDelete)}?` : "Excluir variação?"}
+        confirmLabel="Mover para a lixeira"
+        busyLabel="Movendo…"
+        busy={busy}
+        error={deleteError}
+        onConfirm={() => skuToDelete && deleteSku(skuToDelete)}
+        onClose={() => setSkuToDelete(null)}
+      >
+        <p>
+          A variação sai da loja na hora e vai para a Lixeira, com o estoque que tem. Você pode
+          restaurá-la em até {TRASH_RETENTION_DAYS} dias; pedidos que já têm este SKU não mudam.
+        </p>
+      </ConfirmDialog>
     </div>
   );
 }
@@ -231,6 +345,7 @@ type CallFn = (url: string, init: RequestInit, success: string) => Promise<boole
 type JsonFn = (method: string, body: unknown) => RequestInit;
 
 type AdjustFn = (sku: Sku, quantity: number) => Promise<boolean>;
+type DeleteFn = (sku: Sku) => void;
 
 function SkuTable({
   skus,
@@ -238,24 +353,29 @@ function SkuTable({
   call,
   json,
   adjustStock,
+  onDelete,
 }: {
   skus: Sku[];
   busy: boolean;
   call: CallFn;
   json: JsonFn;
   adjustStock: AdjustFn;
+  onDelete: DeleteFn;
 }) {
   return (
     <div className="-mx-5 -my-5 overflow-x-auto">
       <table className="w-full text-sm">
         <thead className="border-b border-line bg-paper text-left text-xs text-muted">
           <tr>
-            <th className="px-4 py-2 font-medium">SKU</th>
-            <th className="px-4 py-2 font-medium">Preço</th>
-            <th className="px-4 py-2 font-medium">Promocional</th>
-            <th className="px-4 py-2 font-medium">Físico</th>
-            <th className="px-4 py-2 text-right font-medium">Reservado</th>
-            <th className="px-4 py-2 text-right font-medium">Disponível</th>
+            <th className="py-2 pr-3 pl-4 font-medium">SKU</th>
+            <th className="px-3 py-2 font-medium">Preço</th>
+            <th className="px-3 py-2 font-medium">Promocional</th>
+            <th className="px-3 py-2 font-medium">Físico</th>
+            <th className="px-3 py-2 text-right font-medium">Reservado</th>
+            <th className="px-3 py-2 text-right font-medium">Disponível</th>
+            <th className="w-10 px-1 py-2">
+              <span className="sr-only">Ações</span>
+            </th>
           </tr>
         </thead>
         <tbody className="divide-y divide-line">
@@ -267,6 +387,7 @@ function SkuTable({
               call={call}
               json={json}
               adjustStock={adjustStock}
+              onDelete={onDelete}
             />
           ))}
         </tbody>
@@ -281,12 +402,14 @@ function SkuRow({
   call,
   json,
   adjustStock,
+  onDelete,
 }: {
   sku: Sku;
   busy: boolean;
   call: CallFn;
   json: JsonFn;
   adjustStock: AdjustFn;
+  onDelete: DeleteFn;
 }) {
   const [price, setPrice] = useState(String(sku.price));
   const [sale, setSale] = useState(sku.salePrice === null ? "" : String(sku.salePrice));
@@ -295,11 +418,11 @@ function SkuRow({
     Number(price) !== sku.price || (sale === "" ? null : Number(sale)) !== sku.salePrice;
   const stockChanged = Number(stock) !== sku.quantity;
   const cell =
-    "h-8 w-24 rounded border border-line bg-surface px-2 text-sm tabular focus:border-ink focus:outline-none";
+    "h-8 w-20 rounded border border-line bg-surface px-2 text-sm tabular focus:border-ink focus:outline-none";
 
   return (
     <tr>
-      <td className="px-4 py-2">
+      <td className="px-3 py-2">
         <span className="flex items-center gap-2">
           <span
             className="size-3 rounded-full border border-black/15"
@@ -312,7 +435,7 @@ function SkuRow({
             </span>
             <span
               data-volatile
-              className="block max-w-40 truncate font-mono text-[11px] text-muted"
+              className="block max-w-32 truncate font-mono text-[11px] text-muted"
               title={sku.code}
             >
               {sku.code}
@@ -320,7 +443,7 @@ function SkuRow({
           </span>
         </span>
       </td>
-      <td className="px-4 py-2">
+      <td className="px-3 py-2">
         <input
           aria-label={`Preço de ${sku.code}`}
           inputMode="decimal"
@@ -329,7 +452,7 @@ function SkuRow({
           onChange={(e) => setPrice(e.target.value)}
         />
       </td>
-      <td className="px-4 py-2">
+      <td className="px-3 py-2">
         <span className="flex items-center gap-2">
           <input
             aria-label={`Preço promocional de ${sku.code}`}
@@ -363,12 +486,12 @@ function SkuRow({
           <span className="mt-0.5 block text-[11px] text-muted">de {formatPrice(sku.price)}</span>
         )}
       </td>
-      <td className="px-4 py-2">
+      <td className="px-3 py-2">
         <span className="flex items-center gap-2">
           <input
             aria-label={`Estoque físico de ${sku.code}`}
             inputMode="numeric"
-            className={`${cell} w-20`}
+            className={`${cell} w-16`}
             value={stock}
             onChange={(e) => setStock(e.target.value)}
           />
@@ -386,11 +509,23 @@ function SkuRow({
           )}
         </span>
       </td>
-      <td className="tabular px-4 py-2 text-right text-muted">{sku.reserved}</td>
+      <td className="tabular px-3 py-2 text-right text-muted">{sku.reserved}</td>
       <td
-        className={`tabular px-4 py-2 text-right font-medium ${sku.available === 0 ? "text-sale" : ""}`}
+        className={`tabular px-3 py-2 text-right font-medium ${sku.available === 0 ? "text-sale" : ""}`}
       >
         {sku.available}
+      </td>
+      <td className="px-1 py-2 text-right">
+        <button
+          type="button"
+          aria-label={`Excluir ${skuLabel(sku)}`}
+          title="Excluir variação"
+          disabled={busy}
+          onClick={() => onDelete(sku)}
+          className="inline-flex size-8 items-center justify-center rounded-md text-muted transition-colors hover:bg-sale/10 hover:text-sale disabled:cursor-not-allowed disabled:opacity-50"
+        >
+          <Icon name="trash" />
+        </button>
       </td>
     </tr>
   );

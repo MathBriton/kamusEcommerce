@@ -2,8 +2,11 @@
 
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
+import { ICON_PATH } from "./icons";
 
-const NAV = [
+type NavItem = { href: string; label: string; icon: string; badge?: number | null };
+
+const NAV: NavItem[] = [
   {
     href: "/",
     label: "Painel",
@@ -21,9 +24,23 @@ const NAV = [
   },
 ];
 
-export function Sidebar({ name, storeUrl }: { name: string; storeUrl: string }) {
+/** Menu lateral. `trashCount` vem do layout (servidor); null quando a contagem não pôde ser lida. */
+export function Sidebar({
+  name,
+  storeUrl,
+  trashCount = null,
+}: {
+  name: string;
+  storeUrl: string;
+  trashCount?: number | null;
+}) {
   const pathname = usePathname();
   const router = useRouter();
+
+  const control: NavItem[] = [
+    { href: "/atividade", label: "Atividade", icon: ICON_PATH.history },
+    { href: "/lixeira", label: "Lixeira", icon: ICON_PATH.trash, badge: trashCount },
+  ];
 
   async function logout() {
     await fetch("/api/identity/logout", { method: "POST" });
@@ -39,32 +56,20 @@ export function Sidebar({ name, storeUrl }: { name: string; storeUrl: string }) 
       </div>
       <nav aria-label="Menu" className="flex-1 px-3">
         <ul className="space-y-0.5">
-          {NAV.map((item) => {
-            const active = item.href === "/" ? pathname === "/" : pathname.startsWith(item.href);
-            return (
-              <li key={item.href}>
-                <Link
-                  href={item.href}
-                  aria-current={active ? "page" : undefined}
-                  className={`flex items-center gap-2.5 rounded-md px-2.5 py-2 text-sm ${active ? "bg-sand font-medium" : "text-muted hover:bg-paper hover:text-ink"}`}
-                >
-                  <svg
-                    aria-hidden
-                    viewBox="0 0 24 24"
-                    className="size-4"
-                    fill="none"
-                    stroke="currentColor"
-                    strokeWidth="1.7"
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                  >
-                    <path d={item.icon} />
-                  </svg>
-                  {item.label}
-                </Link>
-              </li>
-            );
-          })}
+          {NAV.map((item) => (
+            <NavLink key={item.href} item={item} pathname={pathname} />
+          ))}
+        </ul>
+        <p
+          id="menu-controle"
+          className="mx-2.5 mt-3.5 mb-1 text-[11px] font-semibold tracking-[0.08em] text-muted uppercase"
+        >
+          Controle
+        </p>
+        <ul aria-labelledby="menu-controle" className="space-y-0.5">
+          {control.map((item) => (
+            <NavLink key={item.href} item={item} pathname={pathname} />
+          ))}
         </ul>
       </nav>
       <div className="space-y-2 border-t border-line px-5 py-4 text-xs">
@@ -88,5 +93,41 @@ export function Sidebar({ name, storeUrl }: { name: string; storeUrl: string }) 
         </button>
       </div>
     </aside>
+  );
+}
+
+function NavLink({ item, pathname }: { item: NavItem; pathname: string }) {
+  const active = item.href === "/" ? pathname === "/" : pathname.startsWith(item.href);
+  const badge = item.badge ?? 0;
+  return (
+    <li>
+      <Link
+        href={item.href}
+        aria-current={active ? "page" : undefined}
+        className={`flex items-center gap-2.5 rounded-md px-2.5 py-2 text-sm ${active ? "bg-sand font-medium" : "text-muted hover:bg-paper hover:text-ink"}`}
+      >
+        <svg
+          aria-hidden
+          viewBox="0 0 24 24"
+          className="size-4"
+          fill="none"
+          stroke="currentColor"
+          strokeWidth="1.7"
+          strokeLinecap="round"
+          strokeLinejoin="round"
+        >
+          <path d={item.icon} />
+        </svg>
+        <span className="flex-1">{item.label}</span>
+        {badge > 0 && (
+          <span
+            className={`tabular rounded-full px-[7px] py-px text-[11px] font-semibold text-ink ${active ? "bg-surface" : "bg-sand"}`}
+          >
+            {badge}
+            <span className="sr-only"> {badge === 1 ? "item" : "itens"}</span>
+          </span>
+        )}
+      </Link>
+    </li>
   );
 }
