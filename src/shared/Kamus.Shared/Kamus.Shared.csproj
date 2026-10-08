@@ -13,4 +13,9 @@
     <PackageReference Include="FluentValidation.DependencyInjectionExtensions" />
   </ItemGroup>
 
+  <ItemGroup>
+    <InternalsVisibleTo Include="Kamus.UnitTests" />
+    <InternalsVisibleTo Include="Kamus.IntegrationTests" />
+  </ItemGroup>
+
 </Project>
