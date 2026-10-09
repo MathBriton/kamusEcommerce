@@ -1,12 +1,19 @@
 import { changeValue, isVolatileValue } from "@/lib/audit";
 import type { AuditChange } from "@/lib/schemas";
 
+/**
+ * Códigos (ex.: do SKU) em fonte monoespaçada, como no editor. Além de legíveis, têm largura fixa:
+ * a máscara da regressão visual cobre sempre a mesma área, mesmo com caracteres diferentes.
+ */
+const CODE = "font-mono text-xs";
+
 /** Valor antigo: riscado e discreto. */
 function Before({ change }: { change: AuditChange }) {
+  const volatile = isVolatileValue(change.field, change.before);
   return (
     <span
-      className="text-muted line-through decoration-stone-400"
-      data-volatile={isVolatileValue(change.field, change.before) || undefined}
+      className={`text-muted line-through decoration-stone-400 ${volatile ? CODE : ""}`}
+      data-volatile={volatile || undefined}
     >
       {changeValue(change.before)}
     </span>
@@ -15,11 +22,9 @@ function Before({ change }: { change: AuditChange }) {
 
 /** Valor novo: em destaque. */
 function After({ change }: { change: AuditChange }) {
+  const volatile = isVolatileValue(change.field, change.after);
   return (
-    <span
-      className="font-medium"
-      data-volatile={isVolatileValue(change.field, change.after) || undefined}
-    >
+    <span className={`font-medium ${volatile ? CODE : ""}`} data-volatile={volatile || undefined}>
       {changeValue(change.after)}
     </span>
   );
