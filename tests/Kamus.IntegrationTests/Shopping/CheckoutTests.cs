@@ -87,7 +87,9 @@ public sealed class CheckoutTests(KamusApiFactory factory)
 
         responses.Select(r => r.StatusCode).Should().BeEquivalentTo([HttpStatusCode.Created, HttpStatusCode.Conflict]);
         var loser = responses.Single(r => r.StatusCode == HttpStatusCode.Conflict);
-        (await loser.Content.ReadAsStringAsync(Ct)).Should().Contain("checkout.insufficient_stock");
+        // Quem perde pode cair na reserva (insufficient_stock) ou, se a outra reserva já tiver sido
+        // gravada, na conferência de disponibilidade antes dela (item_unavailable): as duas são "esgotou".
+        (await loser.Content.ReadAsStringAsync(Ct)).Should().ContainAny("checkout.insufficient_stock", "checkout.item_unavailable");
         (await _shop.StockAsync(sku.Id)).Should().Be((1, 1), "exatamente uma reserva");
     }
 

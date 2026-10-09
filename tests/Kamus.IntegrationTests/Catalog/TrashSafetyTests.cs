@@ -4,7 +4,9 @@ using Kamus.Catalog.Api;
 using Kamus.Catalog.Persistence;
 using Kamus.IntegrationTests.Infrastructure;
 using Kamus.IntegrationTests.Shopping;
+using Kamus.Inventory.Persistence;
 using Kamus.Payments.Contracts;
+using Kamus.Reporting;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 
@@ -100,5 +102,45 @@ public sealed class TrashSafetyTests(KamusApiFactory factory)
         var detail = await admin.GetFromJsonAsync<AdminProductDetail>($"/api/admin/catalog/products/{product.Id}", Ct);
         detail!.IsActive.Should().BeTrue();
         detail.Skus.Should().ContainSingle();
+    }
+
+    [Fact]
+    public async Task Excluir_de_vez_remove_o_estoque_dos_skus_de_ponta_a_ponta()
+    {
+        var admin = await _catalog.AdminAsync();
+        var product = await _catalog.CreatePublishedAsync(admin, $"Calça Linho {Guid.NewGuid():N}"[..20]);
+        var skuIds = product.Skus.Select(s => s.Id).ToList();
+        (await StockRowsAsync(skuIds)).Should().Be(skuIds.Count);
+
+        await TrashFixtures.DeleteProductAsync(admin, product.Id);
+        (await StockRowsAsync(skuIds)).Should().Be(skuIds.Count, "na lixeira o estoque fica, para a restauração trazer tudo de volta");
+        (await admin.DeleteAsync($"/api/admin/catalog/trash/product/{product.Id}", Ct)).StatusCode.Should().Be(HttpStatusCode.NoContent);
+
+        (await StockRowsAsync(skuIds)).Should().Be(0, "o expurgo avisa o Inventory (SkusPurged) pelo publicador real");
+    }
+
+    private async Task<int> StockRowsAsync(IReadOnlyCollection<Guid> skuIds)
+    {
+        await using var scope = factory.Services.CreateAsyncScope();
+        var db = scope.ServiceProvider.GetRequiredService<InventoryDbContext>();
+        return await db.StockLevels.CountAsync(s => skuIds.Contains(s.SkuId), Ct);
+    }
+
+    [Fact]
+    public async Task Estoque_baixo_ignora_sku_na_lixeira()
+    {
+        // Disponível 0 e um nome que ordena primeiro: se o filtro falhasse, o SKU estaria no topo da lista.
+        var admin = await _catalog.AdminAsync();
+        var draft = await _catalog.CreateDraftAsync(admin, $"000 Lixeira {Guid.NewGuid():N}"[..20]);
+        var withSkus = await TrashFixtures.AddSkusAsync(admin, draft.Id, "Preto", ["P", "M"], stock: 0);
+        await TrashFixtures.UploadImageAsync(admin, draft.Id, "Preto");
+        await TrashFixtures.PublishAsync(admin, draft.Id);
+        var (trashed, kept) = (withSkus.Skus.Single(s => s.Size == "P"), withSkus.Skus.Single(s => s.Size == "M"));
+        (await admin.DeleteAsync($"/api/admin/catalog/skus/{trashed.Id}", Ct)).EnsureSuccessStatusCode();
+
+        var report = await admin.GetFromJsonAsync<OverviewReport>("/api/admin/reports/overview", Ct);
+
+        report!.LowStock.Should().Contain(i => i.SkuId == kept.Id, "o SKU ativo com estoque zerado aparece");
+        report.LowStock.Should().NotContain(i => i.SkuId == trashed.Id, "o SKU da lixeira não");
     }
 }

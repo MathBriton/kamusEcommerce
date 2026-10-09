@@ -186,12 +186,21 @@ internal sealed class CatalogTrashService(
             return Changed();
         }
 
+        // O expurgo já foi gravado: falhar aqui só faria a tela mostrar erro de algo que aconteceu.
+        // Um aviso perdido deixa estoque órfão (invisível na loja) até a R3 trazer o outbox.
         if (skuIds.Count > 0)
         {
-            await events.PublishAsync(new SkusPurged(skuIds), ct);
+            try
+            {
+                await events.PublishAsync(new SkusPurged(skuIds), ct);
+            }
+            catch (Exception ex) when (ex is not OperationCanceledException)
+            {
+                logger.LogError(ex, "Expurgo gravado, mas o aviso SkusPurged falhou para {Count} SKU(s): estoque pode ficar órfão", skuIds.Count);
+            }
         }
 
-        await DeleteFilesAsync(files, ct);
+        await DeleteFilesAsync(files, CancellationToken.None);
         return Result.Success();
     }
 

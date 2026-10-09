@@ -55,9 +55,9 @@ ser confiável: se a alteração foi gravada, o registro também foi, e ninguém
 - Operações em massa (`ExecuteUpdate`/`ExecuteDelete`) não passam pelo interceptor; quem usá-las em
   dados auditados precisa registrar à mão.
 - **O IP é tão confiável quanto o proxy de borda.** A API só aceita `X-Forwarded-For` vindo da rede
-  interna (onde roda o BFF), mas o BFF repassa o que recebeu. Em produção, o proxy de borda (Caddy)
-  precisa sobrescrever o cabeçalho com o IP real, o que ele faz por padrão. Com o Next.js exposto
-  direto, o IP gravado pode ser forjado.
+  interna (onde roda o BFF), mas o BFF repassa o que recebeu. O deploy precisa de um proxy de borda
+  que sobrescreva o cabeçalho com o IP real (o Caddy planejado faz isso por padrão). Com o Next.js
+  exposto direto, quem age pode forjar o próprio IP, nunca a identidade, que vem do cookie.
 - **"Somente inclusão" protege contra a aplicação, não contra o dono do banco.** Os triggers barram
   bug e SQL acidental. No ambiente local o usuário da aplicação é dono das tabelas (e superusuário)
   e poderia desligá-los. No deploy, as migrations rodam com um papel dono e a aplicação usa outro,

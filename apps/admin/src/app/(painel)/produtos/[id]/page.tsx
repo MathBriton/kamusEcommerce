@@ -31,7 +31,31 @@ export default async function EditProductPage(props: PageProps<"/produtos/[id]">
         )
       : null,
   ]);
-  if (!product) notFound();
+  if (!product) {
+    // Fora do catálogo (na lixeira ou excluído de vez), o produto ainda tem histórico: os links
+    // da Atividade continuam levando a algum lugar útil.
+    if (tab === "historico" && history?.ok && history.data.length > 0) {
+      const name = history.data.find((e) => e.subjectLabel)?.subjectLabel ?? "Produto";
+      return (
+        <>
+          <Link href="/produtos" className="text-sm text-muted hover:text-ink">
+            ← Produtos
+          </Link>
+          <div className="mt-4 mb-6">
+            <h1 className="text-2xl font-semibold tracking-tight">{name}</h1>
+            <p className="mt-2 rounded-md border border-line bg-surface px-3 py-2 text-sm text-muted">
+              Este produto não está mais no catálogo: foi para a lixeira ou foi excluído de vez.{" "}
+              <Link href="/lixeira" className="text-accent underline underline-offset-4">
+                Ver lixeira
+              </Link>
+            </p>
+          </div>
+          <ProductHistory result={history} limit={HISTORY_LIMIT} />
+        </>
+      );
+    }
+    notFound();
+  }
 
   return (
     <>

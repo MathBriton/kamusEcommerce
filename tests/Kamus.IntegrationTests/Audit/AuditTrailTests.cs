@@ -59,9 +59,23 @@ public sealed class AuditTrailTests(KamusApiFactory factory)
     [Fact]
     public async Task Truncate_e_recusado_pelo_banco()
     {
-        var truncate = () => ExecuteAsync("TRUNCATE audit.entries");
+        // Numa transação sempre desfeita: se a proteção regredir, este teste falha sem apagar a trilha
+        // que os outros testes (mesmo banco, em paralelo) estão lendo.
+        var dataSource = factory.Services.GetRequiredService<NpgsqlDataSource>();
+        await using var connection = await dataSource.OpenConnectionAsync(Ct);
+        await using var transaction = await connection.BeginTransactionAsync(Ct);
+        await using var command = new NpgsqlCommand("SET LOCAL lock_timeout = '2s'; TRUNCATE audit.entries", connection, transaction);
 
-        (await truncate.Should().ThrowAsync<PostgresException>()).Which.MessageText.Should().Contain("TRUNCATE");
+        var truncate = () => command.ExecuteNonQueryAsync(Ct);
+
+        try
+        {
+            (await truncate.Should().ThrowAsync<PostgresException>()).Which.MessageText.Should().Contain("TRUNCATE");
+        }
+        finally
+        {
+            await transaction.RollbackAsync(CancellationToken.None);
+        }
     }
 
     [Fact]

@@ -20,8 +20,9 @@ builder.Services.AddSingleton(TimeProvider.System);
 // A API fica atrás do Next.js (BFF): confia nos cabeçalhos X-Forwarded-* para saber se a
 // requisição original era HTTPS (cookies Secure) e qual era o IP do cliente (gravado na auditoria).
 // Só confia neles quando vêm da rede interna (onde roda o BFF): quem chamar a API direto da internet
-// não consegue forjar o IP. O BFF repassa o X-Forwarded-For que recebeu; em produção, o proxy de
-// borda (Caddy) sobrescreve esse cabeçalho com o IP real do cliente (ver ADR 0014).
+// não consegue forjar o IP. O BFF repassa o X-Forwarded-For que recebeu: o IP só é confiável atrás
+// de um proxy de borda que sobrescreva esse cabeçalho (o deploy planejado usa Caddy, que faz isso
+// por padrão). Sem ele, quem age pode forjar o próprio IP, nunca a identidade (ver ADR 0014).
 builder.Services.Configure<ForwardedHeadersOptions>(options =>
 {
     options.ForwardedHeaders = ForwardedHeaders.XForwardedFor | ForwardedHeaders.XForwardedProto | ForwardedHeaders.XForwardedHost;

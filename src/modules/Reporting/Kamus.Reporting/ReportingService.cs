@@ -2,6 +2,7 @@ using Kamus.Catalog.Contracts;
 using Kamus.Inventory.Contracts;
 using Kamus.Orders.Contracts;
 using Kamus.Shared.Results;
+using Kamus.Shared.Time;
 
 namespace Kamus.Reporting;
 
@@ -22,7 +23,7 @@ internal sealed class ReportingService(
     private static readonly string[] AllStatuses = ["Created", "AwaitingPayment", "Paid", "Shipped", "Delivered", "Cancelled", "PaymentFailed"];
 
     /// <summary>Os dias do relatório seguem o horário de Brasília, não UTC.</summary>
-    public static readonly TimeZoneInfo Zone = FindZone();
+    public static readonly TimeZoneInfo Zone = StoreTime.Zone;
 
     public async Task<Result<OverviewReport>> OverviewAsync(DateOnly? from, DateOnly? to, CancellationToken ct)
     {
@@ -104,22 +105,5 @@ internal sealed class ReportingService(
             .Take(12)];
     }
 
-    private static DateTimeOffset StartOfDayUtc(DateOnly date)
-    {
-        var local = date.ToDateTime(TimeOnly.MinValue);
-        return new DateTimeOffset(local, Zone.GetUtcOffset(local)).ToUniversalTime();
-    }
-
-    private static TimeZoneInfo FindZone()
-    {
-        try
-        {
-            return TimeZoneInfo.FindSystemTimeZoneById("America/Sao_Paulo");
-        }
-        catch (TimeZoneNotFoundException)
-        {
-            // Imagens sem base de fusos: Brasília não tem horário de verão desde 2019.
-            return TimeZoneInfo.CreateCustomTimeZone("America/Sao_Paulo", TimeSpan.FromHours(-3), "Brasília", "Brasília");
-        }
-    }
+    private static DateTimeOffset StartOfDayUtc(DateOnly date) => StoreTime.StartOfDayUtc(date);
 }

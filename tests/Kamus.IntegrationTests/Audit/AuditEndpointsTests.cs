@@ -45,7 +45,9 @@ public sealed class AuditEndpointsTests(KamusApiFactory factory)
         var module = AuditSeed.NewModule();
         var maria = new AuditActor(AuditActorKind.Admin, Guid.CreateVersion7(), "Maria Silva", "maria@kamus.test");
         var fakePay = AuditActor.System($"FakePay {module}");
-        var day = new DateTimeOffset(2026, 3, 10, 12, 0, 0, TimeSpan.Zero);
+        // Datas relativas: dentro da retenção (o worker de retenção roda em paralelo noutros testes).
+        var day = new DateTimeOffset(DateTime.UtcNow.Date.AddDays(-10).AddHours(12), TimeSpan.Zero);
+        var dayParam = day.ToString("yyyy-MM-dd", CultureInfo.InvariantCulture);
         await AuditSeed.WriteAsync(factory,
             AuditSeed.Record(module, day.AddDays(-1), maria, "created", changes: [new AuditChange("Nome", null, "Camisa")]),
             AuditSeed.Record(module, day, maria, "published", changes: [new AuditChange("Situação", "Rascunho", "Publicado")]),
@@ -74,8 +76,26 @@ public sealed class AuditEndpointsTests(KamusApiFactory factory)
         var byAction = await admin.GetFromJsonAsync<AuditEntriesPage>($"/api/admin/audit/entries?module={module}&action=paid", Ct);
         byAction!.Total.Should().Be(1);
 
-        var byDay = await admin.GetFromJsonAsync<AuditEntriesPage>($"/api/admin/audit/entries?module={module}&from=2026-03-10&to=2026-03-10", Ct);
+        var byDay = await admin.GetFromJsonAsync<AuditEntriesPage>($"/api/admin/audit/entries?module={module}&from={dayParam}&to={dayParam}", Ct);
         byDay!.Items.Select(i => i.Action).Should().Equal("paid", "published");
+    }
+
+    [Fact]
+    public async Task Filtro_por_dia_usa_o_fuso_da_loja()
+    {
+        var module = AuditSeed.NewModule();
+        var maria = new AuditActor(AuditActorKind.Admin, Guid.CreateVersion7(), "Maria Silva", "maria@kamus.test");
+        var day = DateTime.UtcNow.Date.AddDays(-10);
+        // 01:30 UTC do dia seguinte = 22:30 do dia em Brasília (UTC-3).
+        await AuditSeed.WriteAsync(factory, AuditSeed.Record(module, new DateTimeOffset(day.AddDays(1).AddHours(1.5), TimeSpan.Zero), maria, "updated"));
+        var admin = await _shop.AdminAsync();
+        string Param(DateTime d) => d.ToString("yyyy-MM-dd", CultureInfo.InvariantCulture);
+
+        var sameDay = await admin.GetFromJsonAsync<AuditEntriesPage>($"/api/admin/audit/entries?module={module}&from={Param(day)}&to={Param(day)}", Ct);
+        var nextDay = await admin.GetFromJsonAsync<AuditEntriesPage>($"/api/admin/audit/entries?module={module}&from={Param(day.AddDays(1))}&to={Param(day.AddDays(1))}", Ct);
+
+        sameDay!.Total.Should().Be(1, "a tela mostra 22:30 do dia, então o filtro do dia precisa incluí-la");
+        nextDay!.Total.Should().Be(0);
     }
 
     [Theory]

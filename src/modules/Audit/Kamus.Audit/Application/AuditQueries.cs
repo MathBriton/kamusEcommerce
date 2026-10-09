@@ -4,11 +4,12 @@ using Kamus.Audit.Api;
 using Kamus.Audit.Persistence;
 using Kamus.Shared.Auditing;
 using Kamus.Shared.Results;
+using Kamus.Shared.Time;
 using Microsoft.EntityFrameworkCore;
 
 namespace Kamus.Audit.Application;
 
-/// <summary>Filtros da tela Atividade (e do CSV). Datas em UTC; <c>To</c> é inclusivo.</summary>
+/// <summary>Filtros da tela Atividade (e do CSV). Datas são dias no fuso da loja; <c>To</c> é inclusivo.</summary>
 internal sealed record AuditFilter(string? Actor, string? Module, string? Action, DateOnly? From, DateOnly? To);
 
 internal sealed class AuditQueries(AuditDbContext db)
@@ -137,15 +138,16 @@ internal sealed class AuditQueries(AuditDbContext db)
             query = query.Where(e => e.Action == filter.Action);
         }
 
+        // Dias no fuso da loja, o mesmo em que a tela mostra as horas: "até 08/10" inclui 22:30 de Brasília.
         if (filter.From is { } from)
         {
-            var fromUtc = new DateTimeOffset(from.ToDateTime(TimeOnly.MinValue), TimeSpan.Zero);
+            var fromUtc = StoreTime.StartOfDayUtc(from);
             query = query.Where(e => e.OccurredAt >= fromUtc);
         }
 
         if (filter.To is { } to)
         {
-            var toUtc = new DateTimeOffset(to.AddDays(1).ToDateTime(TimeOnly.MinValue), TimeSpan.Zero);
+            var toUtc = StoreTime.StartOfDayUtc(to.AddDays(1));
             query = query.Where(e => e.OccurredAt < toUtc);
         }
 

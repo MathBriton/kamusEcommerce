@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import { redirect } from "next/navigation";
 import { TrashView } from "@/components/trash/TrashView";
 import { Alert, PageHeader, Pagination } from "@/components/ui";
 import { trashPageSchema } from "@/lib/schemas";
@@ -29,6 +30,12 @@ export default async function TrashPage(props: PageProps<"/lixeira">) {
     const qs = next.toString();
     return `/lixeira${qs ? `?${qs}` : ""}`;
   };
+
+  // Restaurar ou expurgar os últimos itens de uma página deixa a página vazia: volta para a última
+  // página que ainda tem itens, em vez de mostrar "nada por aqui" com itens nas outras.
+  if (result.ok && result.data.items.length === 0 && page > 1) {
+    redirect(href(Math.max(1, Math.ceil(result.data.total / PAGE_SIZE))));
+  }
 
   return (
     <>

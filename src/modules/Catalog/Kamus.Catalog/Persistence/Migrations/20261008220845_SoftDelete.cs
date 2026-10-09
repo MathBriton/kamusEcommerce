@@ -141,6 +141,19 @@ namespace Kamus.Catalog.Persistence.Migrations
         /// <inheritdoc />
         protected override void Down(MigrationBuilder migrationBuilder)
         {
+            // Sem as colunas deleted_*, o que está na lixeira voltaria à loja (e os índices únicos sem
+            // filtro falhariam com slugs reaproveitados). Reverter exige esvaziar a lixeira antes.
+            migrationBuilder.Sql("""
+                DO $$
+                BEGIN
+                    IF EXISTS (SELECT 1 FROM catalog.products WHERE deleted_at IS NOT NULL)
+                       OR EXISTS (SELECT 1 FROM catalog.skus WHERE deleted_at IS NOT NULL)
+                       OR EXISTS (SELECT 1 FROM catalog.product_images WHERE deleted_at IS NOT NULL) THEN
+                        RAISE EXCEPTION 'A lixeira do catálogo não está vazia: restaure ou exclua de vez os itens antes de reverter esta migration.';
+                    END IF;
+                END $$;
+                """);
+
             migrationBuilder.DropIndex(
                 name: "ix_skus_code",
                 schema: "catalog",

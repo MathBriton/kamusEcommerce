@@ -77,7 +77,12 @@ export function ActivityTable({ entries }: { entries: AuditEntry[] }) {
                     <ActionBadge entityType={entry.entityType} action={entry.action} />
                   </td>
                   <td className="px-4 py-3">
-                    <span className="block">{subjectName(entry)}</span>
+                    <span
+                      className="block"
+                      data-volatile={entry.subjectLabel === null || undefined}
+                    >
+                      {subjectName(entry)}
+                    </span>
                     <span className="block text-xs text-muted">
                       {moduleLabel(entry.module)} ·{" "}
                       {entry.detail ?? entityTypeLabel(entry.entityType)}
