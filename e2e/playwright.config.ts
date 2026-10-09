@@ -43,8 +43,12 @@ export default defineConfig({
       name: "backoffice",
       testMatch: /backoffice\.spec\.ts/,
       dependencies: ["compra"],
-      // Campos de data seguem o idioma do Chromium (não o do contexto): dd/mm/aaaa como no Brasil.
-      use: { viewport: { width: 1360, height: 900 }, launchOptions: { args: ["--lang=pt-BR"] } },
+      // Campos de data seguem o idioma do processo do Chromium, que no Linux vem das variáveis de
+      // ambiente (o --lang e o locale do contexto não bastam): dd/mm como no Brasil.
+      use: {
+        viewport: { width: 1360, height: 900 },
+        launchOptions: { env: { ...process.env, LANG: "pt_BR.UTF-8", LANGUAGE: "pt_BR:pt" } },
+      },
     },
   ],
 });
