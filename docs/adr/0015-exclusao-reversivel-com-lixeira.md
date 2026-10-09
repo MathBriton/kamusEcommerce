@@ -33,6 +33,14 @@ vitrine, da busca, do carrinho e do checkout, sem que cada consulta precise lemb
   - **o log de auditoria** (ADR 0014).
 - **Dados pessoais não usam soft delete:** manter dados "escondidos" não atende o direito de
   eliminação da LGPD. A exclusão de conta será por anonimização (R10).
+- **Concorrência otimista** (`xmin`) em produto, SKU e imagem:
+  - expurgar algo que acabou de ser restaurado, ou excluir as duas últimas variações ao mesmo
+    tempo, falha em vez de um atropelar o outro;
+  - os casos de uso disputados tentam de novo com dados frescos (`ConcurrencyRetry`);
+  - o resto responde 409 com uma mensagem clara.
+- **Fotos usadas por pedidos ficam.** O item do pedido guarda a URL da foto da compra. Antes de
+  apagar um arquivo, o expurgo pergunta ao Orders (`IOrderImageReferences`); o histórico do
+  cliente não perde a miniatura.
 
 ## Alternativas consideradas
 
@@ -48,6 +56,8 @@ vitrine, da busca, do carrinho e do checkout, sem que cada consulta precise lemb
   `ISoftDeletable`, ganhar filtro e ter os índices únicos revistos.
 - Consultas que precisam ver excluídos têm de pedir isso explicitamente (`IgnoreQueryFilters`),
   o que deixa a intenção visível no código.
+- O aviso `SkusPurged` sai depois do commit do expurgo. Se falhar, o estoque daqueles SKUs fica
+  órfão (sem efeito na loja, que já não os vê) até a R3 trazer o outbox.
 - As linhas excluídas ocupam espaço até o expurgo; com 30 dias de retenção, o volume é desprezível.
 - A página da vitrine de um produto excluído pode seguir no cache do Next.js por até 5 minutos (ISR);
   a revalidação sob demanda chega na R4.

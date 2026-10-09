@@ -70,6 +70,12 @@ internal sealed class Product : ISoftDeletable
 
     public string? DeletedByName { get; private set; }
 
+    /// <summary>
+    /// Concorrência otimista (coluna <c>xmin</c>): excluir de vez, restaurar e editar ao mesmo tempo
+    /// falham em vez de um sobrescrever o outro (ex.: expurgar um item que acabou de ser restaurado).
+    /// </summary>
+    public uint Version { get; private set; }
+
     public Sku AddSku(string code, ColorInfo color, string size, int sizeOrder, decimal price, decimal? salePrice, Guid? id = null)
     {
         Sku.EnsureValidPrices(price, salePrice);
@@ -226,6 +232,12 @@ internal sealed class Sku : ISoftDeletable
 
     public string? DeletedByName { get; private set; }
 
+    /// <summary>
+    /// Concorrência otimista (coluna <c>xmin</c>): excluir de vez, restaurar e editar ao mesmo tempo
+    /// falham em vez de um sobrescrever o outro (ex.: expurgar um item que acabou de ser restaurado).
+    /// </summary>
+    public uint Version { get; private set; }
+
     public void Restore() => (DeletedAt, DeletedById, DeletedByName) = (null, null, null);
 
     public void UpdatePrices(decimal price, decimal? salePrice)
@@ -284,5 +296,14 @@ internal sealed class ProductImage : ISoftDeletable
 
     public string? DeletedByName { get; private set; }
 
+    /// <summary>
+    /// Concorrência otimista (coluna <c>xmin</c>): excluir de vez, restaurar e editar ao mesmo tempo
+    /// falham em vez de um sobrescrever o outro (ex.: expurgar um item que acabou de ser restaurado).
+    /// </summary>
+    public uint Version { get; private set; }
+
     public void Restore() => (DeletedAt, DeletedById, DeletedByName) = (null, null, null);
+
+    /// <summary>Posição na galeria da cor (uma imagem restaurada vai para o fim, sem empatar com as atuais).</summary>
+    public void MoveTo(int sortOrder) => SortOrder = sortOrder;
 }

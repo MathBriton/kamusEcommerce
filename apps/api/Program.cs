@@ -11,18 +11,26 @@ ValidationDefaults.Configure();
 var builder = WebApplication.CreateBuilder(args);
 
 builder.Services.AddProblemDetails();
+builder.Services.AddExceptionHandler<ConcurrencyExceptionHandler>();
 builder.Services.AddOpenApi();
 builder.Services.AddSharedInfrastructure(builder.Configuration);
 builder.Services.AddFileStorage(builder.Configuration);
 builder.Services.AddSingleton(TimeProvider.System);
 
 // A API fica atrás do Next.js (BFF): confia nos cabeçalhos X-Forwarded-* para saber se a
-// requisição original era HTTPS (cookies Secure) e qual era o IP do cliente.
+// requisição original era HTTPS (cookies Secure) e qual era o IP do cliente (gravado na auditoria).
+// Só confia neles quando vêm da rede interna (onde roda o BFF): quem chamar a API direto da internet
+// não consegue forjar o IP. O BFF repassa o X-Forwarded-For que recebeu; em produção, o proxy de
+// borda (Caddy) sobrescreve esse cabeçalho com o IP real do cliente (ver ADR 0014).
 builder.Services.Configure<ForwardedHeadersOptions>(options =>
 {
     options.ForwardedHeaders = ForwardedHeaders.XForwardedFor | ForwardedHeaders.XForwardedProto | ForwardedHeaders.XForwardedHost;
     options.KnownIPNetworks.Clear();
     options.KnownProxies.Clear();
+    foreach (var network in (string[])["127.0.0.0/8", "10.0.0.0/8", "172.16.0.0/12", "192.168.0.0/16", "::1/128", "fc00::/7"])
+    {
+        options.KnownIPNetworks.Add(System.Net.IPNetwork.Parse(network));
+    }
 });
 
 builder.Services.AddCors(options => options.AddDefaultPolicy(policy => policy

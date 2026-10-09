@@ -3,6 +3,7 @@ using Kamus.Catalog.Api;
 using Kamus.Catalog.Domain;
 using Kamus.Catalog.Persistence;
 using Kamus.Inventory.Contracts;
+using Kamus.Shared.Infrastructure;
 using Kamus.Shared.Results;
 using Kamus.Shared.Storage;
 using Kamus.Shared.Text;
@@ -57,7 +58,7 @@ internal sealed class CatalogAdminService(
                 p.IsActive,
                 SkuIds = p.Skus.Select(s => s.Id).ToList(),
                 MinPrice = p.Skus.Min(s => (decimal?)(s.SalePrice ?? s.Price)),
-                Image = p.Images.OrderBy(i => i.SortOrder).ThenBy(i => i.Color).Select(i => i.StorageKey).FirstOrDefault(),
+                Image = p.Images.OrderBy(i => i.SortOrder).ThenBy(i => i.Color).ThenBy(i => i.Id).Select(i => i.StorageKey).FirstOrDefault(),
                 p.UpdatedAt,
             })
             .ToListAsync(ct);
@@ -123,27 +124,29 @@ internal sealed class CatalogAdminService(
         return await ToDetailAsync(product, ct);
     }
 
-    public async Task<Result<AdminProductDetail>> SetActiveAsync(Guid id, bool active, CancellationToken ct)
-    {
-        var product = await LoadAsync(id, ct);
-        if (product is null)
+    /// <summary>Concorrência: com outra edição simultânea, tenta de novo e reavalia (ex.: o último SKU acabou de sair).</summary>
+    public Task<Result<AdminProductDetail>> SetActiveAsync(Guid id, bool active, CancellationToken ct) =>
+        ConcurrencyRetry.ExecuteAsync<Result<AdminProductDetail>>(db, async () =>
         {
-            return NotFound();
-        }
+            var product = await LoadAsync(id, ct);
+            if (product is null)
+            {
+                return NotFound();
+            }
 
-        if (active && !product.Activate(clock.GetUtcNow()))
-        {
-            return Error.Conflict("catalog.product_without_skus", "Cadastre ao menos um SKU antes de publicar o produto.");
-        }
+            if (active && !product.Activate(clock.GetUtcNow()))
+            {
+                return Error.Conflict("catalog.product_without_skus", "Cadastre ao menos um SKU antes de publicar o produto.");
+            }
 
-        if (!active)
-        {
-            product.Deactivate(clock.GetUtcNow());
-        }
+            if (!active)
+            {
+                product.Deactivate(clock.GetUtcNow());
+            }
 
-        await db.SaveChangesAsync(ct);
-        return await ToDetailAsync(product, ct);
-    }
+            await db.SaveChangesAsync(ct);
+            return await ToDetailAsync(product, ct);
+        });
 
     public async Task<Result<AdminProductDetail>> AddSkusAsync(Guid id, AddSkusRequest request, CancellationToken ct)
     {
@@ -249,47 +252,50 @@ internal sealed class CatalogAdminService(
     /// Manda o produto para a lixeira com todos os SKUs e imagens ativos (mesmo instante, para que
     /// voltem juntos). O estoque fica como está: se o produto for restaurado, volta com ele.
     /// </summary>
-    public async Task<Result> DeleteProductAsync(Guid id, CancellationToken ct)
-    {
-        var product = await db.Products.Include(p => p.Skus).Include(p => p.Images)
-            .FirstOrDefaultAsync(p => p.Id == id, ct);
-        if (product is null)
+    public Task<Result> DeleteProductAsync(Guid id, CancellationToken ct) =>
+        ConcurrencyRetry.ExecuteAsync<Result>(db, async () =>
         {
-            return NotFound();
-        }
+            var product = await db.Products.Include(p => p.Skus).Include(p => p.Images)
+                .FirstOrDefaultAsync(p => p.Id == id, ct);
+            if (product is null)
+            {
+                return NotFound();
+            }
 
-        db.Products.Remove(product);
-        await db.SaveChangesAsync(ct);
-        return Result.Success();
-    }
+            db.Products.Remove(product);
+            await db.SaveChangesAsync(ct);
+            return Result.Success();
+        });
 
     /// <summary>
     /// Manda um SKU para a lixeira. Produto publicado não pode ficar sem variação: a última precisa
     /// esperar a despublicação.
     /// </summary>
-    public async Task<Result<AdminProductDetail>> DeleteSkuAsync(Guid skuId, CancellationToken ct)
-    {
-        var product = await db.Products.Include(p => p.Skus).Include(p => p.Images)
-            .FirstOrDefaultAsync(p => p.Skus.Any(s => s.Id == skuId), ct);
-        if (product is null)
+    /// <summary>Duas exclusões simultâneas não deixam produto publicado sem SKU: a segunda reavalia e recebe 409.</summary>
+    public Task<Result<AdminProductDetail>> DeleteSkuAsync(Guid skuId, CancellationToken ct) =>
+        ConcurrencyRetry.ExecuteAsync<Result<AdminProductDetail>>(db, async () =>
         {
-            return SkuNotFound();
-        }
+            var product = await db.Products.Include(p => p.Skus).Include(p => p.Images)
+                .FirstOrDefaultAsync(p => p.Skus.Any(s => s.Id == skuId), ct);
+            if (product is null)
+            {
+                return SkuNotFound();
+            }
 
-        if (product.IsLastSkuOnSale(skuId))
-        {
-            return Error.Conflict("catalog.last_sku", "Despublique o produto antes de excluir a última variação.");
-        }
+            if (product.IsLastSkuOnSale(skuId))
+            {
+                return Error.Conflict("catalog.last_sku", "Despublique o produto antes de excluir a última variação.");
+            }
 
-        if (product.RemoveSku(skuId, clock.GetUtcNow()) is not { } sku)
-        {
-            return SkuNotFound();
-        }
+            if (product.RemoveSku(skuId, clock.GetUtcNow()) is not { } sku)
+            {
+                return SkuNotFound();
+            }
 
-        db.Skus.Remove(sku);
-        await db.SaveChangesAsync(ct);
-        return await ToDetailAsync(product, ct);
-    }
+            db.Skus.Remove(sku);
+            await db.SaveChangesAsync(ct);
+            return await ToDetailAsync(product, ct);
+        });
 
     /// <summary>
     /// Código curto e legível para etiqueta e planilha: iniciais do produto + 4 caracteres do id,
@@ -327,7 +333,7 @@ internal sealed class CatalogAdminService(
                 var level = levels[s.Id];
                 return new AdminSku(s.Id, s.Code, s.Color, s.ColorHex, s.Size, s.Price, s.SalePrice, level.Quantity, level.Reserved, level.Available);
             })],
-            [.. product.Images.OrderBy(i => i.Color).ThenBy(i => i.SortOrder)
+            [.. product.Images.OrderBy(i => i.Color).ThenBy(i => i.SortOrder).ThenBy(i => i.Id)
                 .Select(i => new AdminImage(i.Id, i.Color, storage.GetPublicUrl(i.StorageKey), i.Alt, i.SortOrder))],
             product.CreatedAt,
             product.UpdatedAt);

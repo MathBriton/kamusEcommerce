@@ -114,7 +114,9 @@ internal sealed class CatalogQueries(CatalogDbContext db, IInventoryService inve
             .Include(p => p.Skus)
             .Include(p => p.Images)
             .AsSplitQuery()
-            .FirstOrDefaultAsync(p => p.Slug == slug && p.IsActive, ct);
+            // Publicado sem nenhuma variação ativa (ex.: corrida entre excluir o último SKU e publicar) não tem
+            // preço nem estoque: trata como inexistente em vez de quebrar a página.
+            .FirstOrDefaultAsync(p => p.Slug == slug && p.IsActive && p.Skus.Any(), ct);
 
         if (product is null)
         {
@@ -133,7 +135,7 @@ internal sealed class CatalogQueries(CatalogDbContext db, IInventoryService inve
             .Select(g => new ColorOption(
                 g.Key.Color,
                 g.Key.ColorHex,
-                [.. product.Images.Where(i => i.Color == g.Key.Color).OrderBy(i => i.SortOrder).Select(ToImage)],
+                [.. product.Images.Where(i => i.Color == g.Key.Color).OrderBy(i => i.SortOrder).ThenBy(i => i.Id).Select(ToImage)],
                 [.. g.OrderBy(s => s.SizeOrder).Select(s => new SizeOption(s.Id, s.Code, s.Size, s.Price, s.SalePrice, availability.GetValueOrDefault(s.Id)))]))
             .ToList();
 
@@ -155,7 +157,7 @@ internal sealed class CatalogQueries(CatalogDbContext db, IInventoryService inve
     public async Task<IReadOnlyList<SitemapEntry>> GetSitemapAsync(CancellationToken ct)
     {
         var products = await db.Products.AsNoTracking()
-            .Where(p => p.IsActive)
+            .Where(p => p.IsActive && p.Skus.Any())
             .Select(p => new SitemapEntry(p.Category.Path + "/" + p.Slug, p.UpdatedAt))
             .ToListAsync(ct);
 
@@ -228,7 +230,7 @@ internal sealed class CatalogQueries(CatalogDbContext db, IInventoryService inve
                 p.Brand,
                 CategoryPath = p.Category.Path,
                 Skus = p.Skus.Select(s => new { s.Color, s.ColorHex, s.Price, s.SalePrice }).ToList(),
-                Image = p.Images.OrderBy(i => i.SortOrder).ThenBy(i => i.Color).Select(i => new { i.StorageKey, i.Alt }).FirstOrDefault(),
+                Image = p.Images.OrderBy(i => i.SortOrder).ThenBy(i => i.Color).ThenBy(i => i.Id).Select(i => new { i.StorageKey, i.Alt }).FirstOrDefault(),
             })
             .AsSplitQuery()
             .ToListAsync(ct);

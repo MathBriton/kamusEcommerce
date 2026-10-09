@@ -1,6 +1,7 @@
 using Kamus.Catalog.Api;
 using Kamus.Catalog.Contracts;
 using Kamus.Catalog.Persistence;
+using Kamus.Orders.Contracts;
 using Kamus.Shared.Events;
 using Kamus.Shared.Infrastructure;
 using Kamus.Shared.Results;
@@ -55,6 +56,7 @@ internal static class TrashItemTypes
 internal sealed class CatalogTrashService(
     CatalogDbContext db,
     IFileStorage storage,
+    IOrderImageReferences orderImages,
     IEventPublisher events,
     IOptions<CatalogOptions> options,
     TimeProvider clock,
@@ -105,6 +107,12 @@ internal sealed class CatalogTrashService(
                 TrashItemType.Sku => await RestoreSkuAsync(id, ct),
                 _ => await RestoreImageAsync(id, ct),
             };
+        }
+        catch (DbUpdateConcurrencyException)
+        {
+            // Alguém expurgou ou alterou o item entre a leitura e a gravação (token xmin).
+            db.ChangeTracker.Clear();
+            return Changed();
         }
         catch (DbUpdateException ex) when (ex.IsUniqueViolation())
         {
@@ -167,7 +175,16 @@ internal sealed class CatalogTrashService(
         }
 
         // Remover o que já está na lixeira é DELETE de verdade (SoftDeleteInterceptor), auditado como "purged".
-        await db.SaveChangesAsync(ct);
+        // O DELETE leva o xmin lido: se o item foi restaurado (ou alterado) nesse meio-tempo, nada é apagado.
+        try
+        {
+            await db.SaveChangesAsync(ct);
+        }
+        catch (DbUpdateConcurrencyException)
+        {
+            db.ChangeTracker.Clear();
+            return Changed();
+        }
 
         if (skuIds.Count > 0)
         {
@@ -312,7 +329,11 @@ internal sealed class CatalogTrashService(
             return ParentDeleted();
         }
 
+        // Vai para o fim da galeria da cor: a posição antiga pode ter sido ocupada por outra foto.
+        var last = await db.Images.Where(i => i.ProductId == image.ProductId && i.Color == image.Color)
+            .MaxAsync(i => (int?)i.SortOrder, ct);
         image.Restore();
+        image.MoveTo((last ?? -1) + 1);
         product.Touch(clock.GetUtcNow());
         await db.SaveChangesAsync(ct);
         return new RestoreResult(TrashText.ImageRestored(product.Name, image.Color));
@@ -488,9 +509,20 @@ internal sealed class CatalogTrashService(
     /// <summary>Apaga os arquivos que nenhuma imagem (ativa ou na lixeira) usa mais.</summary>
     private async Task DeleteFilesAsync(IEnumerable<string> keys, CancellationToken ct)
     {
-        foreach (var key in keys.Distinct(StringComparer.Ordinal))
+        var candidates = keys.Distinct(StringComparer.Ordinal).ToList();
+        if (candidates.Count == 0)
         {
-            if (await db.Images.IgnoreQueryFilters().AnyAsync(i => i.StorageKey == key, ct))
+            return;
+        }
+
+        // Pedidos guardam a URL da foto no momento da compra: esses arquivos ficam, senão o histórico
+        // do cliente e do backoffice perde a miniatura (o pedido nunca é excluído).
+        var inOrders = await orderImages.FindReferencedAsync([.. candidates.Select(storage.GetPublicUrl)], ct);
+
+        foreach (var key in candidates)
+        {
+            if (inOrders.Contains(storage.GetPublicUrl(key))
+                || await db.Images.IgnoreQueryFilters().AnyAsync(i => i.StorageKey == key, ct))
             {
                 continue;
             }
@@ -510,6 +542,10 @@ internal sealed class CatalogTrashService(
     private static Error NotInTrash() => Error.NotFound("catalog.trash_item_not_found", "Item não encontrado na lixeira.");
 
     private static Error ParentDeleted() => Error.Conflict("catalog.parent_deleted", "Restaure o produto primeiro.");
+
+    private static Error Changed() => Error.Conflict(
+        "catalog.trash_changed",
+        "Este item mudou enquanto você mexia na lixeira (alguém o restaurou, excluiu de vez ou alterou). Recarregue a página.");
 
     private sealed record TrashKey(TrashItemType Type, Guid Id, DateTimeOffset DeletedAt);
 

@@ -21,6 +21,7 @@ internal sealed class CatalogService(CatalogDbContext db, IFileStorage storage) 
                 Image = p.Images
                     .Where(i => i.Color == s.Color)
                     .OrderBy(i => i.SortOrder)
+                    .ThenBy(i => i.Id)
                     .Select(i => i.StorageKey)
                     .FirstOrDefault(),
             })

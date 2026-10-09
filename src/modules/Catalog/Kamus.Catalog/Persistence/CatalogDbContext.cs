@@ -58,6 +58,7 @@ internal sealed class CatalogDbContext(DbContextOptions<CatalogDbContext> option
         modelBuilder.Entity<Product>(b =>
         {
             b.HasSoftDelete();
+            b.Property(x => x.Version).IsRowVersion();
             b.Property(p => p.Name).HasMaxLength(200);
             b.Property(p => p.Slug).HasMaxLength(200);
             b.Property(p => p.Brand).HasMaxLength(100);
@@ -75,6 +76,7 @@ internal sealed class CatalogDbContext(DbContextOptions<CatalogDbContext> option
         modelBuilder.Entity<Sku>(b =>
         {
             b.HasSoftDelete();
+            b.Property(x => x.Version).IsRowVersion();
             b.Property(s => s.Code).HasMaxLength(50);
             b.Property(s => s.Color).HasMaxLength(50);
             b.Property(s => s.ColorHex).HasMaxLength(7);
@@ -92,6 +94,7 @@ internal sealed class CatalogDbContext(DbContextOptions<CatalogDbContext> option
         {
             b.ToTable("product_images");
             b.HasSoftDelete();
+            b.Property(x => x.Version).IsRowVersion();
             b.Property(i => i.Color).HasMaxLength(50);
             b.Property(i => i.StorageKey).HasMaxLength(300);
             b.Property(i => i.Alt).HasMaxLength(300);

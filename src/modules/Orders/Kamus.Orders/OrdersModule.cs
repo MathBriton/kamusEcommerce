@@ -26,6 +26,7 @@ public sealed class OrdersModule : IModule
         services.AddScoped<OrderQueries>();
         services.AddScoped<OrderAdminService>();
         services.AddScoped<IOrderReports>(sp => sp.GetRequiredService<OrderAdminService>());
+        services.AddScoped<IOrderImageReferences, OrderImageReferences>();
         services.AddScoped<OrderEventHandlers>();
         services.AddScoped<IEventHandler<PaymentApproved>>(sp => sp.GetRequiredService<OrderEventHandlers>());
         services.AddScoped<IEventHandler<PaymentDeclined>>(sp => sp.GetRequiredService<OrderEventHandlers>());

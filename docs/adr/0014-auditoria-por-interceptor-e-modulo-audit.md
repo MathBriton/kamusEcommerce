@@ -54,6 +54,17 @@ ser confiável: se a alteração foi gravada, o registro também foi, e ninguém
   precisam ser incluídos de propósito, o que evita vazar dado sensível (o Identity nunca é auditado).
 - Operações em massa (`ExecuteUpdate`/`ExecuteDelete`) não passam pelo interceptor; quem usá-las em
   dados auditados precisa registrar à mão.
+- **O IP é tão confiável quanto o proxy de borda.** A API só aceita `X-Forwarded-For` vindo da rede
+  interna (onde roda o BFF), mas o BFF repassa o que recebeu. Em produção, o proxy de borda (Caddy)
+  precisa sobrescrever o cabeçalho com o IP real, o que ele faz por padrão. Com o Next.js exposto
+  direto, o IP gravado pode ser forjado.
+- **"Somente inclusão" protege contra a aplicação, não contra o dono do banco.** Os triggers barram
+  bug e SQL acidental. No ambiente local o usuário da aplicação é dono das tabelas (e superusuário)
+  e poderia desligá-los. No deploy, as migrations rodam com um papel dono e a aplicação usa outro,
+  sem `ALTER` nem `DISABLE TRIGGER` (R7).
+- **A trilha guarda dados pessoais de clientes** (nome, e-mail, IP, destinatário), mantidos por
+  obrigação de registro durante a retenção. A anonimização de conta da R10 vai precisar de uma
+  função dedicada, liberada pelo trigger e ela mesma auditada.
 - A tela Atividade e o histórico do produto são consultas sobre uma única tabela indexada por
   agregado e por data. Quando a R3 trouxer outbox e broker, a auditoria pode virar consumidora de
   eventos sem mudar a tabela.

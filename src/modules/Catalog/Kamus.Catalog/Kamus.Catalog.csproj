@@ -4,6 +4,7 @@
     <ProjectReference Include="../../../shared/Kamus.Shared/Kamus.Shared.csproj" />
     <ProjectReference Include="../Kamus.Catalog.Contracts/Kamus.Catalog.Contracts.csproj" />
     <ProjectReference Include="../../Inventory/Kamus.Inventory.Contracts/Kamus.Inventory.Contracts.csproj" />
+    <ProjectReference Include="../../Orders/Kamus.Orders.Contracts/Kamus.Orders.Contracts.csproj" />
   </ItemGroup>
 
   <ItemGroup>
