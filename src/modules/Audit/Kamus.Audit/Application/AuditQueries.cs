@@ -20,6 +20,13 @@ internal sealed class AuditQueries(AuditDbContext db)
     public const int DefaultSubjectLimit = 200;
     public const int MaxSubjectLimit = 500;
 
+    /// <summary>Teto de página: além disso, <c>(página - 1) * tamanho</c> estoura o inteiro.</summary>
+    public const int MaxPage = 100_000;
+
+    /// <summary>Período aceito nos filtros; datas fora dele (ex.: 9999-12-31) não fazem sentido e estourariam o cálculo do fim do dia.</summary>
+    private static readonly DateOnly MinDate = new(2000, 1, 1);
+    private static readonly DateOnly MaxDate = new(2100, 12, 31);
+
     public async Task<Result<AuditEntriesPage>> ListAsync(AuditFilter filter, int? page, int? pageSize, CancellationToken ct)
     {
         var query = Filter(filter);
@@ -28,7 +35,7 @@ internal sealed class AuditQueries(AuditDbContext db)
             return query.Error!;
         }
 
-        var (number, size) = (Math.Max(page ?? 1, 1), Math.Clamp(pageSize ?? DefaultPageSize, 1, MaxPageSize));
+        var (number, size) = (Math.Clamp(page ?? 1, 1, MaxPage), Math.Clamp(pageSize ?? DefaultPageSize, 1, MaxPageSize));
         var total = await query.Value.CountAsync(ct);
         var rows = await Newest(query.Value).Skip((number - 1) * size).Take(size).ToListAsync(ct);
 
@@ -90,6 +97,12 @@ internal sealed class AuditQueries(AuditDbContext db)
 
     internal Result<IQueryable<AuditEntry>> Filter(AuditFilter filter)
     {
+        if (filter.From is { } first && (first < MinDate || first > MaxDate)
+            || filter.To is { } last && (last < MinDate || last > MaxDate))
+        {
+            return Error.Validation("audit.invalid_period", "Informe datas entre 2000 e 2100.");
+        }
+
         if (filter.From is { } start && filter.To is { } end && start > end)
         {
             return Error.Validation("audit.invalid_period", "A data inicial deve ser anterior ou igual à final.");

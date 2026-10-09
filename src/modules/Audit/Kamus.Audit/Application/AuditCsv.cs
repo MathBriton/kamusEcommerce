@@ -62,11 +62,15 @@ internal static class AuditCsv
         return value[0] is '=' or '+' or '-' or '@' or '\t' or '\r' ? "'" + value : value;
     }
 
-    /// <summary>Célula neutralizada e, se preciso, entre aspas (com aspas internas duplicadas).</summary>
+    /// <summary>
+    /// Célula neutralizada e, se preciso, entre aspas (com aspas internas duplicadas). A vírgula também
+    /// leva aspas: numa planilha configurada com <c>,</c> como separador, "x,=FÓRMULA" viraria duas
+    /// células e a segunda escaparia da neutralização.
+    /// </summary>
     public static string Cell(string? value)
     {
         var text = Neutralize(value);
-        return text.IndexOfAny([Separator, '"', '\n', '\r']) >= 0
+        return text.IndexOfAny([Separator, ',', '"', '\n', '\r']) >= 0
             ? $"\"{text.Replace("\"", "\"\"", StringComparison.Ordinal)}\""
             : text;
     }

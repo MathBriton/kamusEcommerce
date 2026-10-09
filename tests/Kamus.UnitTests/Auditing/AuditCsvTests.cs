@@ -25,6 +25,8 @@ public sealed class AuditCsvTests
     [InlineData("Camisa \"Linho\"", "\"Camisa \"\"Linho\"\"\"")]
     [InlineData("linha\nquebrada", "\"linha\nquebrada\"")]
     [InlineData("=1+1;2", "\"'=1+1;2\"")]
+    [InlineData("x,=HYPERLINK(1)", "\"x,=HYPERLINK(1)\"")]
+    [InlineData("R$ 249,90", "\"R$ 249,90\"")]
     [InlineData("simples", "simples")]
     public void Celula_entre_aspas_quando_preciso(string value, string expected) =>
         AuditCsv.Cell(value).Should().Be(expected);
@@ -58,7 +60,7 @@ public sealed class AuditCsvTests
         cells[1].Should().Be("Catálogo");
         cells[2].Should().Be("Editou variação");
         cells[3].Should().Be("'=Camisa de Linho");
-        cells[5].Should().Be("Preço: R$ 249,90 → R$ 199,90 | Promocional: — → R$ 179,90");
+        cells[5].Should().Be("\"Preço: R$ 249,90 → R$ 199,90 | Promocional: — → R$ 179,90\"");
         cells[7].Should().Be("Admin");
         lines[2].Should().BeEmpty();
     }

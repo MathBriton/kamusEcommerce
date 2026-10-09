@@ -81,11 +81,24 @@ public sealed class AuditEndpointsTests(KamusApiFactory factory)
     [Theory]
     [InlineData("actor=nao-e-usuario")]
     [InlineData("from=2026-03-10&to=2026-03-01")]
+    [InlineData("to=9999-12-31")]
+    [InlineData("from=0001-01-01")]
     public async Task Filtro_invalido_retorna_400(string query)
     {
         var admin = await _shop.AdminAsync();
 
         (await admin.GetAsync($"/api/admin/audit/entries?{query}", Ct)).StatusCode.Should().Be(HttpStatusCode.BadRequest);
+    }
+
+    [Fact]
+    public async Task Pagina_enorme_nao_derruba_a_api()
+    {
+        var admin = await _shop.AdminAsync();
+
+        var page = await admin.GetFromJsonAsync<AuditEntriesPage>($"/api/admin/audit/entries?page={int.MaxValue}&pageSize=100", Ct);
+
+        page!.Items.Should().BeEmpty();
+        page.Page.Should().Be(100_000);
     }
 
     [Fact]
