@@ -4,46 +4,40 @@
 > é um bilhete para quem continua, não um histórico completo (o histórico está no `git log` e no
 > `stack.md`).
 
-**Última atualização:** 2026-10-08 · Claude Code
+**Última atualização:** 2026-10-09 · Claude Code
 
 ## Onde estamos
 
-- Concluídas: **R0, R1, R2** (MVP), **R2.5** (backoffice) e **R8** (qualidade contínua).
+- Concluídas: **R0, R1, R2** (MVP), **R2.5** (backoffice), **R8** (qualidade contínua) e **R12**
+  (auditoria e exclusão segura).
 - `main` é a branch padrão do GitHub. CI: API, Web, Admin, Docker images, **E2E e regressão
   visual**; CodeQL e Dependabot ativos.
+- A R12 foi feita na branch `claude/festive-pasteur-l8jhiz` e **ainda não foi para a `main`**
+  (aguardando o responsável pedir o merge/push).
 - Deploy público **adiado por decisão do responsável** (`render.yaml` e `docs/deploy.md` prontos).
 
-## Em andamento: R12 — Auditoria & Exclusão segura (branch `claude/festive-pasteur-l8jhiz`)
+## R12 em uma frase por peça
 
-Telas aprovadas pelo responsável num canvas (Atividade, Lixeira, aba Histórico do produto, ator no
-histórico do pedido, diálogo de exclusão). Decisões: retenção da auditoria 2 anos (mín. 365 dias),
-expurgo da lixeira 30 dias, ações automáticas como ator "Sistema" (ex.: FakePay), excluir produto
-leva SKUs e imagens junto, "Excluir de vez" para Admin, pedidos nunca são excluídos.
+- `Kamus.Shared.Auditing`: `ICurrentActor`, política por módulo (allowlist de campos),
+  `SoftDeleteInterceptor` e `AuditingInterceptor` (mesma transação da alteração).
+- Módulo **Audit** (schema `audit`): tabela somente inclusão (triggers), retenção de 2 anos,
+  `/api/admin/audit/*` com CSV.
+- Catalog: soft delete + lixeira + expurgo (30 dias) + `xmin` em produto/SKU/imagem; Orders: ator no
+  histórico; Inventory: auditoria do estoque e handler de `SkusPurged`.
+- Backoffice: Atividade, Lixeira, aba Histórico, exclusão com confirmação, ator no pedido.
+- Limitações conhecidas (IP atrás de proxy de borda, dono do banco, dados pessoais na trilha,
+  `SkusPurged` sem outbox): ver consequências dos ADRs 0014 e 0015.
 
-**Já na branch:**
-- ADRs [0014](adr/0014-auditoria-por-interceptor-e-modulo-audit.md) e
-  [0015](adr/0015-exclusao-reversivel-com-lixeira.md); `docs/architecture.md`, `AGENTS.md`, README.
-- Shared (`Kamus.Shared.Auditing`): `ICurrentActor`, `AuditPolicyBuilder` (allowlist por módulo),
-  `SoftDeleteInterceptor`, `AuditingInterceptor` (grava na mesma transação), `IFileStorage.DeleteAsync`;
-  claim `kamus:full_name` no Identity.
-- Módulo **Audit** (schema `audit`, triggers de somente inclusão, retenção, endpoints
-  `/api/admin/audit/*` com CSV), registrado no host; testes unitários, de arquitetura e integração.
-- Contrato do Catalog: `DescribeSkusAsync`, `SkuDescription`, evento `SkusPurged`.
-- Backoffice completo contra o contrato (Atividade, Lixeira, Histórico, exclusões, ator no pedido).
-- E2E novos em `e2e/tests/backoffice.spec.ts` (capturas 07 a 10 ainda **não geradas**).
+## Próximo passo: R3 — Eventos & Busca
 
-**Pela metade (worktrees locais, branches `r12-catalog` e `r12-orders`, ainda não mergeadas):**
-- Catalog: soft delete em produto/SKU/imagem, filtros e índices parciais, política de auditoria,
-  endpoints de exclusão, lixeira, restauração, expurgo e `TrashPurgeWorker`.
-- Orders/Inventory/Payments/Reporting: ator no histórico do pedido (migration), políticas de
-  auditoria de pedido e estoque, `ActAs(System("FakePay"))`, handler de `SkusPurged`.
-- Se essas worktrees se perderem (o container é efêmero), refazer a partir do escopo da R12 no
-  `stack.md`, dos ADRs 0014/0015 e da API já pronta no Shared e no front (o front mostra o contrato
-  JSON esperado em `apps/admin/src/lib/schemas.ts`).
+Escopo em `stack.md`. Sugestão de execução:
 
-**Falta depois do merge:** checagens completas, `./e2e/run.sh --update` (todas as capturas do admin
-mudam: menu ganhou a seção Controle), revisão das imagens, revisão de código, `stack.md` (R12 ✅) e
-este handoff.
+1. ADR do broker (RabbitMQ + MassTransit) e da consistência eventual na busca.
+2. Outbox no Orders e no Catalog (substitui o "outbox simplificado" do Payments, ADR 0009, e resolve
+   o `SkusPurged` sem garantia de entrega da R12).
+3. Meilisearch sincronizado por eventos; busca na vitrine (caixa no cabeçalho + página de resultados).
+4. Reporting com read models próprios.
+5. E2E da busca com capturas novas em `apps/web/design`.
 
 ## Decisões em aberto
 
@@ -53,6 +47,11 @@ este handoff.
   do GitHub Actions, backup diário do Postgres e firewall/SSH endurecidos. Front pode ficar na mesma
   VPS ou na Vercel. Aguardando escolha do provedor e do domínio; quando confirmado, vira escopo da R7
   (ou uma release de deploy antes dela).
+- **Publicação para entrevista (2026-10-08):** o responsável quer aprender instalando um **Ubuntu
+  Server num notebook parado**, com Docker Compose de produção e Cloudflare Tunnel. Proposta de
+  guia passo a passo (`docs/deploy-notebook.md`, `docker-compose.prod.yml`) ainda não começada.
+  Requisitos vindos da R12 para qualquer deploy: o proxy de borda precisa sobrescrever
+  `X-Forwarded-For`, e migrations e aplicação devem usar papéis diferentes no Postgres.
 
 ## Contexto útil
 

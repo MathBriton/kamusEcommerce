@@ -4,7 +4,7 @@
 > Domínio inspirado em lojas de moda brasileiras; marca, identidade visual e conteúdo são próprios.
 
 **Codinome do projeto:** `Kamus`
-**Status:** R8 concluída; próxima: R12 (Auditoria & Exclusão segura). Deploy público adiado por decisão.
+**Status:** R12 concluída; próxima: R3 (Eventos & Busca). Deploy público adiado por decisão.
 **Última revisão:** 2026-10-06
 
 ---
@@ -77,8 +77,8 @@ de execução. Releases *planejadas* tiveram o escopo aprovado e ainda não come
 | 3 | R2 | Compra | Conta, carrinho, checkout, pedido | ✅ concluída **(MVP)**; deploy público adiado |
 | 4 | R2.5 | Backoffice | Admin de catálogo, estoque e pedidos; relatórios | ✅ concluída |
 | 5 | R8 | Qualidade contínua | Testes E2E no CI, regressão visual, dependências | ✅ concluída |
-| 6 | R12 | Auditoria & Exclusão segura | Log de auditoria, soft delete, lixeira no backoffice | *planejada* · próxima |
-| 7 | R3 | Eventos & Busca | Outbox, mensageria, busca facetada, read models | — |
+| 6 | R12 | Auditoria & Exclusão segura | Log de auditoria, soft delete, lixeira no backoffice | ✅ concluída |
+| 7 | R3 | Eventos & Busca | Outbox, mensageria, busca facetada, read models | próxima |
 | 8 | R6 | Operação | Observabilidade, testes de carga, resiliência | — |
 | 9 | R9 | Promoções | Cupons, regras de preço, campanhas | *planejada* |
 | 10 | R10 | Segurança & LGPD | Direitos do titular, 2FA, papéis, CSP | *planejada* |
@@ -291,7 +291,7 @@ pixels, estáveis em execuções repetidas; seed com ids determinísticos; pági
   auditoria da R12 para registrar acessos sensíveis
 - Cabeçalhos de segurança e Content Security Policy na loja e no admin; revisão OWASP Top 10
 
-### R12 — Auditoria & Exclusão segura *(planejada · próxima)*
+### R12 — Auditoria & Exclusão segura ✅
 
 **Objetivo:** saber sempre quem fez o quê, quando e qual era o valor anterior, e nunca perder um
 dado por um clique errado no backoffice.
@@ -326,6 +326,19 @@ dado por um clique errado no backoffice.
 **Pronto quando:** toda ação do backoffice aparece na tela Atividade com o valor anterior; um
 produto excluído some da loja e do admin, aparece na Lixeira e volta intacto ao ser restaurado.
 
+**Entregue:**
+- Módulo **Audit** com trilha somente inclusão garantida por triggers, gravada na mesma transação
+  da alteração.
+- Políticas de auditoria (allowlist de campos) em Catalog, Inventory e Orders; ator Admin,
+  Cliente ou Sistema (FakePay, expiração de reserva, expurgo).
+- Soft delete com filtro global, índices parciais e token de concorrência em produto, SKU e imagem.
+- Lixeira com restaurar, excluir de vez e expurgo automático (30 dias), preservando as fotos que
+  pedidos ainda exibem.
+- Telas Atividade (filtros, CSV), Lixeira, aba Histórico e ator no histórico do pedido.
+- ADRs 0014 e 0015; capturas 07–10 do backoffice geradas pelo E2E.
+- Revisão independente (5 dimensões, achados verificados por um segundo agente): todos os achados
+  confirmados foram corrigidos e as limitações conhecidas estão nos ADRs.
+
 ### R11 — Backoffice 2 *(planejada)*
 
 - Gestão de categorias e coleções; reordenação de imagens
@@ -358,3 +371,4 @@ produto excluído some da loja e do admin, aparece na Lixeira e volta intacto ao
 | 2026-10-07 | — | Roteiro reordenado (R3 → R6 antes de R4/R5); pendências dos ADRs incorporadas; propostas R8–R11 |
 | 2026-10-07 | — | Propostas R8–R11 aprovadas; nova R12 (Auditoria & Exclusão segura), logo após a R8 |
 | 2026-10-07 | R8 | Qualidade contínua: E2E + regressão visual (Playwright em container), `packages/tokens`, página `/design-system`, Dependabot, CodeQL, devcontainer; ADR 0013 |
+| 2026-10-09 | R12 | Auditoria & Exclusão segura: módulo Audit (somente inclusão), soft delete com lixeira e expurgo, telas Atividade/Lixeira/Histórico; ADRs 0014–0015 |
