@@ -11,7 +11,7 @@ RUN dotnet restore apps/api/Kamus.Api.csproj
 COPY apps/api/ apps/api/
 RUN dotnet publish apps/api/Kamus.Api.csproj -c Release -o /app --no-restore
 
-FROM mcr.microsoft.com/dotnet/aspnet:10.0 AS runtime
+FROM mcr.microsoft.com/dotnet/aspnet:11.0 AS runtime
 WORKDIR /app
 ENV ASPNETCORE_HTTP_PORTS=8080
 EXPOSE 8080
